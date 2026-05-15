@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { WinstonModule } from 'nest-winston';
 import winston from 'winston';
@@ -9,13 +8,22 @@ import winston from 'winston';
       transports: [
         new winston.transports.Console({
           format: winston.format.combine(
-            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            winston.format.timestamp({
+              format: 'YYYY-MM-DD HH:mm:ss',
+            }),
             winston.format.colorize(),
-            winston.format.printf(({ timestamp, level, message, context }) => {
-              return `[${timestamp}] [${level}] ${context ? '[' + context + ']' : ''} ${message}`;
+            winston.format.printf((info) => {
+              const timestamp = String(info.timestamp);
+              const level = String(info.level);
+              const message = String(info.message);
+              const context =
+                typeof info.context === 'string' ? `[${info.context}]` : '';
+
+              return `[${timestamp}] [${level}] ${context} ${message}`;
             }),
           ),
         }),
+
         new winston.transports.File({
           filename: 'logs/error.log',
           level: 'error',
@@ -24,6 +32,7 @@ import winston from 'winston';
             winston.format.json(),
           ),
         }),
+
         new winston.transports.File({
           filename: 'logs/combined.log',
           format: winston.format.combine(

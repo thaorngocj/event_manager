@@ -105,8 +105,7 @@ export class RegistrationService {
       };
       userId = parsed.userId;
       registrationId = parsed.registrationId;
-    } catch (error) {
-      console.error('Invalid QR data:', error);
+    } catch {
       throw new BadRequestException('QR code không hợp lệ');
     }
 

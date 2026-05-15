@@ -119,8 +119,10 @@ export class Event {
   get isRegistrationOpen(): boolean {
     const now = new Date();
     const deadline = this.registrationDeadline ?? this.startDate;
+
     return (
-      this.status === EVENT_STATUS.UPCOMING &&
+      (this.status === EVENT_STATUS.UPCOMING ||
+        this.status === EVENT_STATUS.OPEN) &&
       !this.isCancelled &&
       now < deadline &&
       (this.maxParticipants == null ||

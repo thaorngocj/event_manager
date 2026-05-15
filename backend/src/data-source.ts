@@ -2,6 +2,9 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { User } from './modules/users/user.entity';
 import { Event } from './modules/events/event.entity';
+import { Registration } from './modules/registrations/registration.entity';
+import { ImportHistory } from './modules/events/history.event.entity';
+
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -13,7 +16,7 @@ export const AppDataSource = new DataSource({
   username: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD || 'postpass',
   database: process.env.POSTGRES_DB || 'mydb',
-  entities: [User, Event],
+  entities: [User, Event, Registration, ImportHistory],
   migrations: ['dist/migrations/*.js'],
   synchronize: false,
   logging: true,

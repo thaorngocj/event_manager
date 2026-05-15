@@ -34,8 +34,14 @@ export class EventsController {
   constructor(private eventsService: EventsService) {}
 
   @Get()
-  findAll(@Query('page') page = 1, @Query('limit') limit = 20) {
-    return this.eventsService.findAll(+page, +limit);
+  findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+    @Query('faculty') faculty?: string,
+  ) {
+    return this.eventsService.findAll(+page, +limit, status, category, faculty);
   }
   @Get('calendar')
   getCalendar(@Query() query: CalendarQueryDto) {
@@ -44,7 +50,6 @@ export class EventsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    console.log('HIT EVENT ID ROUTE', id);
     return this.eventsService.findOne(+id);
   }
 

@@ -9,6 +9,8 @@ import { EventsModule } from './modules/events/events.module';
 import { RegistrationsModule } from './modules/registrations/registration.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -26,6 +28,12 @@ import { LoggerModule } from './common/logger/logger.module';
         options: '-c TimeZone=Asia/Ho_Chi_Minh',
       },
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 phút
+        limit: 100, // tối đa 100 request/phút
+      },
+    ]),
     LoggerModule,
     AuthModule,
     UsersModule,
@@ -34,6 +42,12 @@ import { LoggerModule } from './common/logger/logger.module';
     StatisticsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

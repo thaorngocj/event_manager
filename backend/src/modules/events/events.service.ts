@@ -122,8 +122,14 @@ export class EventsService {
     return this.repo.save(event);
   }
 
-  async findAll(page = 1, limit = 20) {
+  async findAll(page = 1, limit = 20, status?: string, category?: string, faculty?: string) {
+    const where: Record<string, any> = {};
+    if (status) where.status = status;
+    if (category) where.eventCategory = category;
+    if (faculty) where.faculty = faculty;
+
     const [data, total] = await this.repo.findAndCount({
+      where: Object.keys(where).length ? where : undefined,
       order: { startDate: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,
