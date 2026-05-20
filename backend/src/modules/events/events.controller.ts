@@ -22,6 +22,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Query } from '@nestjs/common';
 import { CalendarQueryDto } from './dto/calendar-query.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 interface AuthRequest extends Request {
   user: {
@@ -29,6 +30,8 @@ interface AuthRequest extends Request {
   };
 }
 
+@ApiTags('events')
+@ApiBearerAuth()
 @Controller('events')
 export class EventsController {
   constructor(private eventsService: EventsService) {}

@@ -24,6 +24,11 @@ export class CreateUserDto {
   @IsEmail()
   email!: string;
 
+  @ApiPropertyOptional({ example: '217IT01010' })
+  @IsOptional()
+  @IsString()
+  mssv?: string;
+
   @ApiProperty({ example: 'StrongPass@123', minLength: 6 })
   @IsString()
   @MinLength(6)
@@ -58,6 +63,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @ApiPropertyOptional({ example: '217IT01010' })
+  @IsOptional()
+  @IsString()
+  mssv?: string;
 
   @ApiPropertyOptional({ example: 'NewPass@123', minLength: 6 })
   @IsOptional()

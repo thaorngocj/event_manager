@@ -23,6 +23,9 @@ export class User {
   @Column()
   password!: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, unique: true })
+  mssv?: string | null;
+
   @Column({ default: 'STUDENT' })
   role!: 'STUDENT' | 'EVENT_MANAGER' | 'ADMIN' | 'SUPER_ADMIN';
 
@@ -34,6 +37,12 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @Column({ type: 'varchar', nullable: true })
+  resetPasswordToken?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  resetPasswordExpires?: Date | null;
 
   @BeforeInsert()
   @BeforeUpdate()

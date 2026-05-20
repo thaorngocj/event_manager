@@ -1,12 +1,20 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { MailService } from '../mail/mail.service';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   async login(email: string, password: string) {
@@ -24,37 +32,75 @@ export class AuthService {
   }
 
   // Thêm method refresh token mới
-  async refreshToken(refreshToken: string) {
+  async refreshToken(token: string) {
     try {
-      // Verify refresh token
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const payload = this.jwtService.verify(refreshToken);
+      const payload = this.jwtService.verify<{
+        sub: number;
+        email: string;
+        role: string;
+      }>(token);
 
-      // Tìm user trong database
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
       const user = await this.usersService.findById(payload.sub);
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
 
-      // Tạo access token mới
-      const newPayload = { sub: user.id, email: user.email, role: user.role };
-      const newAccessToken = this.jwtService.sign(newPayload, {
+      const newPayload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      const accessToken = this.jwtService.sign(newPayload, {
         expiresIn: '1h',
       });
 
-      // Có thể tạo refresh token mới (optional)
-      const newRefreshToken = this.jwtService.sign(newPayload, {
+      const refreshToken = this.jwtService.sign(newPayload, {
         expiresIn: '7d',
       });
 
       return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
+        accessToken,
+        refreshToken,
       };
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return {
+        message:
+          'Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
+      };
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1); // 1 hour
+
+    await this.usersService.setResetToken(user.id, token, expires);
+    await this.mailService.sendPasswordResetEmail(user.email, token);
+
+    return {
+      message:
+        'Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.usersService.findByResetToken(token);
+
+    if (
+      !user ||
+      !user.resetPasswordExpires ||
+      new Date() > user.resetPasswordExpires
+    ) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePasswordAndClearToken(user.id, hashed);
+
+    return { message: 'Đặt lại mật khẩu thành công' };
   }
 }

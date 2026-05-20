@@ -12,7 +12,10 @@ import { RegistrationService } from './registration.service';
 import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { RolesGuard } from '../../guards/roles.guard';
 import { Roles } from '../../decorators/roles.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('registrations')
+@ApiBearerAuth()
 @Controller('registrations')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RegistrationController {

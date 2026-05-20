@@ -8,6 +8,8 @@ import { UsersModule } from './modules/users/users.module';
 import { EventsModule } from './modules/events/events.module';
 import { RegistrationsModule } from './modules/registrations/registration.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { MailModule } from './modules/mail/mail.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -40,6 +42,8 @@ import { APP_GUARD } from '@nestjs/core';
     EventsModule,
     RegistrationsModule,
     StatisticsModule,
+    UploadModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [

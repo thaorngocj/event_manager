@@ -1,88 +1,33 @@
-### Hệ thống Quản lý Ngày Rèn luyện - Backend
-Backend API chuyên dụng cho hệ thống quản lý sự kiện, hỗ trợ đăng ký, check-in, thống kê và phân quyền người dùng. Hệ thống được thiết kế để vận hành ổn định trên môi trường Docker.
+# H? th?ng Qu?n l� Ng�y R�n luy?n
 
-### Tính năng chính
-- Xác thực & Phân quyền: Đăng nhập JWT, refresh token. Hỗ trợ đa vai trò: STUDENT, EVENT_MANAGER, ADMIN, SUPER_ADMIN.
-- Quản lý sự kiện: Quy trình tự động (UPCOMING → ONGOING → CLOSED). Lọc theo danh mục và hiển thị lịch.
-- Đăng ký & Check-in: Sinh viên nhận QR code sau khi đăng ký. Hỗ trợ quét QR hoặc check-in thủ công.
-- Import/Export Excel: Xử lý dữ liệu danh sách người tham gia nhanh chóng qua file Excel.
-- Thống kê: Dashboard tổng quan về số lượng sự kiện, tỷ lệ tham gia và bảng xếp hạng sinh viên.
+H? th?ng qu?n l� s? ki?n v� ng�y r�n luy?n to�n di?n v?i thi?t k? theo m� h�nh Client-Server. H? th?ng h? tr? sinh vi�n dang k�, check-in qua QR code, v� h? tr? ban t? ch?c qu?n l� s? ki?n, di?m danh cung nhu import danh s�ch sinh vi�n qua Excel.
 
-** Tài liệu API: Tích hợp Swagger UI tương tác trực tiếp.
+## C�c module ch�nh
+1. **Frontend (React + Vite)**:
+   - Giao di?n ngu?i d�ng hi?n d?i v?i TailwindCSS, shadcn/ui.
+   - SPA (Single Page Application) tuong t�c mu?t m�, h? tr? t�m ki?m s? ki?n, qu?n l� form d?ng.
+   - H? tr? da ng�n ng? (i18n), qu?n l� state qua Zustand/Context.
 
-### Công nghệ sử dụng
-- Core: Node.js (v18), NestJS (v11)
-- Database: PostgreSQL (v15), TypeORM
-- Security: JWT (Passport-jwt)
-- Utility: ExcelJS, QRCode, Winston (Logging)
-- DevOps: Docker, Docker Compose
+2. **Backend (NestJS + PostgreSQL)**:
+   - Ki?n tr�c module h�a ch?t ch?.
+   - X�c th?c & Ph�n quy?n: �ang nh?p JWT. H? tr? da vai tr�: STUDENT, EVENT_MANAGER, ADMIN, SUPER_ADMIN.
+   - R�ng bu?c d? li?u (Validation) nghi�m ng?t (vd: mssv - M� s? sinh vi�n l� duy nh?t).
+   - Cron Job t? d?ng c?p nh?t tr?ng th�i s? ki?n (UPCOMING ? ONGOING ? CLOSED).
+   - T�ch h?p t�i li?u API v?i Swagger UI.
 
-### Cài đặt và chạy với Docker (Khuyến nghị)
-1. Clone repository
-Bash
-git clone <your-repo-url>
-cd <project-folder>
-2. Tạo file cấu hình môi trường
-Tạo file .env ở thư mục gốc (cùng cấp với docker-compose.yml) với nội dung sau:
+## T�nh nang n?i b?t
+- **�ang k� & Check-in**: Sinh vi�n nh?n QR code sau khi dang k�. H? tr? qu�t QR ho?c check-in th? c�ng.
+- **Import/Export Excel**: X? l� d? li?u danh s�ch tham gia qu� kh? nhanh ch�ng qua file Excel.
+- **Th?ng k�**: Dashboard t?ng quan s? lu?ng s? ki?n, t? l? tham gia v� danh s�ch ngu?i d�ng.
 
-Đoạn mã
-# Database Configuration
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_strong_password
-POSTGRES_DB=event_management
+## C�i d?t v� ch?y v?i Docker (Khuy?n ngh?)
+1. C?u h�nh m�i tru?ng b?ng c�ch t?o file .env ? thu m?c g?c.
+2. Build v� ch?y c�c container:
+   `ash
+   docker-compose up -d --build
+   `
+3. Kh?i t?o Database (Migration) tr�n Docker:
+   `ash
+   docker exec nest_backend npm run typeorm migration:run
+   `
 
-# Backend Connections
-DB_HOST=db
-DB_PORT=5432
-
-# Security
-JWT_SECRET=your_super_secret_key_change_me
-
-# Server Port
-PORT=3000
-Lưu ý: DB_HOST phải để là db để khớp với tên service định nghĩa trong Docker Compose.
-
-3. Build và chạy container
-Bash
-docker-compose up -d --build
-
-Quá trình này sẽ:
-- Tải các Image cần thiết (PostgreSQL, Node.js).
-- Tự động cài đặt dependencies và build source code.
-- Khởi chạy các container theo đúng thứ tự.
-
-4. Khởi tạo Database (Migration)
-Sau khi container đã chạy, bạn cần chạy migration để tạo bảng và dữ liệu mẫu:
-
-Bash
-# Truy cập vào container
-docker exec -it nest_backend sh
-
-# Chạy migration bên trong container
-npm run typeorm migration:run -- -d dist/data-source.js
-Dữ liệu mẫu bao gồm các tài khoản: Admin, Student và Super Admin.
-
-5. Kiểm tra hoạt động
-API Endpoint: http://localhost:3000/api/v1
-Swagger Documentation: http://localhost:3000/api/docs
-
-📂 Cấu trúc thư mục
-.
-├── src/
-│   ├── common/logger/       # Cấu hình Winston logging
-│   ├── constants/           # Định nghĩa Role, Status, Category
-│   ├── decorators/          # Các custom decorator (ví dụ: @Roles)
-│   ├── guards/              # JwtAuthGuard, RolesGuard
-│   ├── migrations/          # File quản lý cấu trúc DB
-│   ├── modules/
-│   │   ├── auth/            # Xử lý Login, JWT, Refresh Token
-│   │   ├── users/           # Quản lý người dùng & phân quyền
-│   │   ├── events/          # CRUD sự kiện & xử lý Excel
-│   │   ├── registrations/   # Đăng ký, QR Code & Check-in
-│   │   └── statistics/      # Tổng hợp dữ liệu báo cáo
-│   ├── app.module.ts
-│   └── main.ts
-├── Dockerfile
-├── docker-compose.yml
-├── .env
-└── README.md

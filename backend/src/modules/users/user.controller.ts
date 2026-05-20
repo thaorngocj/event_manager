@@ -30,6 +30,13 @@ import {
   UpdateUserDto,
 } from './dto/user.dto';
 import { UsersService } from './users.service';
+export interface AuthRequest extends Request {
+  user: {
+    userId: number;
+    email?: string;
+    role?: string;
+  };
+}
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -61,8 +68,8 @@ export class UsersController {
   // Xem profile của chính mình
   @Get('me')
   @ApiOperation({ summary: 'Xem profile của user đang đăng nhập' })
-  getMe(@Request() req: { user: { id: number } }) {
-    return this.usersService.findById(req.user.id);
+  getMe(@Request() req: AuthRequest) {
+    return this.usersService.findById(req.user.userId);
   }
 
   // SUPER_ADMIN / ADMIN: xem bất kỳ user
@@ -77,11 +84,8 @@ export class UsersController {
   // User tự cập nhật profile của mình
   @Patch('me')
   @ApiOperation({ summary: 'Cập nhật username/email của chính mình' })
-  updateMe(
-    @Request() req: { user: { id: number } },
-    @Body() dto: UpdateUserDto,
-  ) {
-    return this.usersService.updateUser(req.user.id, dto);
+  updateMe(@Request() req: AuthRequest, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateUser(req.user.userId, dto);
   }
 
   // SUPER_ADMIN: cập nhật profile user

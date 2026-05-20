@@ -35,4 +35,31 @@ export class AuthController {
     }
     return await this.authService.refreshToken(refreshToken);
   }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Yêu cầu đặt lại mật khẩu' })
+  @ApiResponse({ status: 200, description: 'Gửi email thành công' })
+  async forgotPassword(@Body('email') email: string) {
+    if (!email) throw new UnauthorizedException('Email required');
+    return await this.authService.forgotPassword(email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Đặt lại mật khẩu với token' })
+  @ApiResponse({ status: 200, description: 'Đặt lại mật khẩu thành công' })
+  @ApiResponse({
+    status: 400,
+    description: 'Token không hợp lệ hoặc đã hết hạn',
+  })
+  async resetPassword(
+    @Body('token') token: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    if (!token || !newPassword) {
+      throw new UnauthorizedException('Token and newPassword required');
+    }
+    return await this.authService.resetPassword(token, newPassword);
+  }
 }

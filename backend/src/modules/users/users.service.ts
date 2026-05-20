@@ -40,20 +40,27 @@ export class UsersService {
   private async assertNotDuplicate(
     email: string,
     username: string,
+    mssv?: string | null,
     excludeId?: number,
   ): Promise<void> {
+    const whereConditions: any[] = [{ email }, { username }];
+    if (mssv) whereConditions.push({ mssv });
+
     const existing = await this.repo.findOne({
-      where: [{ email }, { username }],
+      where: whereConditions,
     });
     if (existing && existing.id !== excludeId) {
-      const field = existing.email === email ? 'Email' : 'Username';
+      let field = 'Thông tin';
+      if (existing.email === email) field = 'Email';
+      else if (existing.username === username) field = 'Username';
+      else if (mssv && existing.mssv === mssv) field = 'MSSV';
       throw new ConflictException(`${field} đã tồn tại`);
     }
   }
 
   // Create
   async createUser(dto: CreateUserDto): Promise<Omit<User, 'password'>> {
-    await this.assertNotDuplicate(dto.email, dto.username);
+    await this.assertNotDuplicate(dto.email, dto.username, dto.mssv);
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = this.repo.create({
       ...dto,
@@ -108,7 +115,31 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.repo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'role'],
+      select: ['id', 'email', 'password', 'role'], // include what you need
+    });
+  }
+
+  async setResetToken(id: number, token: string, expires: Date): Promise<void> {
+    await this.repo.update(id, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+  }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.repo.findOne({
+      where: { resetPasswordToken: token },
+    });
+  }
+
+  async updatePasswordAndClearToken(
+    id: number,
+    newPasswordHashed: string,
+  ): Promise<void> {
+    await this.repo.update(id, {
+      password: newPasswordHashed,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
     });
   }
 
@@ -120,10 +151,11 @@ export class UsersService {
     const user = await this.repo.findOne({ where: { id } });
     if (!user) throw new NotFoundException(`Không tìm thấy user id=${id}`);
 
-    if (dto.email || dto.username) {
+    if (dto.email || dto.username || dto.mssv) {
       await this.assertNotDuplicate(
         dto.email ?? user.email,
         dto.username ?? user.username,
+        dto.mssv ?? user.mssv,
         id,
       );
     }

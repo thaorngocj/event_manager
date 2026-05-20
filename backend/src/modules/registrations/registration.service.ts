@@ -11,6 +11,7 @@ import { Registration } from './registration.entity';
 import { Event } from '../events/event.entity';
 import { EVENT_STATUS } from '../../constants/event.constants';
 import { User } from '../users/user.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class RegistrationService {
@@ -21,6 +22,7 @@ export class RegistrationService {
     private eventRepo: Repository<Event>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private mailService: MailService,
   ) {}
 
   async register(userId: number, eventId: number) {
@@ -81,13 +83,21 @@ export class RegistrationService {
       registrationId: savedRegistration.id, // Dùng ID thật
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const qrCode = await toDataURL(qrData);
 
     // Cập nhật QR code vào registration
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     savedRegistration.qrCode = qrCode;
-    return this.repo.save(savedRegistration);
+    const finalRegistration = await this.repo.save(savedRegistration);
+
+    // Gửi email thông báo (bất đồng bộ)
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (user && user.email) {
+      this.mailService
+        .sendEventRegistrationNotification(user.email, event.title)
+        .catch(console.error);
+    }
+
+    return finalRegistration;
   }
 
   async checkIn(
