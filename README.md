@@ -1,33 +1,36 @@
-# H? th?ng Qu?n l� Ng�y R�n luy?n
+# Hệ thống Quản lý Ngày Rèn luyện
+Hệ thống quản lý sự kiện và ngày rèn luyện toàn diện với thiết kế theo mô hình Client-Server. Hệ thống hỗ trợ sinh viên đăng ký, check-in qua QR code, và hỗ trợ ban tổ chức quản lý sự kiện, điểm danh cũng như import danh sách sinh viên qua Excel.
 
-H? th?ng qu?n l� s? ki?n v� ng�y r�n luy?n to�n di?n v?i thi?t k? theo m� h�nh Client-Server. H? th?ng h? tr? sinh vi�n dang k�, check-in qua QR code, v� h? tr? ban t? ch?c qu?n l� s? ki?n, di?m danh cung nhu import danh s�ch sinh vi�n qua Excel.
+## Các module chính
 
-## C�c module ch�nh
-1. **Frontend (React + Vite)**:
-   - Giao di?n ngu?i d�ng hi?n d?i v?i TailwindCSS, shadcn/ui.
-   - SPA (Single Page Application) tuong t�c mu?t m�, h? tr? t�m ki?m s? ki?n, qu?n l� form d?ng.
-   - H? tr? da ng�n ng? (i18n), qu?n l� state qua Zustand/Context.
+### 1. Frontend (React + Vite)
+- Giao diện người dùng hiện đại với TailwindCSS, shadcn/ui.
+- SPA (Single Page Application) tương tác mượt mà, hỗ trợ tìm kiếm sự kiện, quản lý form đăng ký.
+- Hỗ trợ đa ngôn ngữ (i18n), quản lý state qua Zustand/Context.
 
-2. **Backend (NestJS + PostgreSQL)**:
-   - Ki?n tr�c module h�a ch?t ch?.
-   - X�c th?c & Ph�n quy?n: �ang nh?p JWT. H? tr? da vai tr�: STUDENT, EVENT_MANAGER, ADMIN, SUPER_ADMIN.
-   - R�ng bu?c d? li?u (Validation) nghi�m ng?t (vd: mssv - M� s? sinh vi�n l� duy nh?t).
-   - Cron Job t? d?ng c?p nh?t tr?ng th�i s? ki?n (UPCOMING ? ONGOING ? CLOSED).
-   - T�ch h?p t�i li?u API v?i Swagger UI.
+### 2. Backend (NestJS + PostgreSQL)
+- Kiến trúc module hóa chặt chẽ.
+- Xác thực & Phân quyền: Đăng nhập JWT. Hỗ trợ đa vai trò: `STUDENT`, `EVENT_MANAGER`, `ADMIN`, `SUPER_ADMIN`.
+- Ràng buộc dữ liệu (Validation) nghiêm ngặt (ví dụ: MSSV — Mã số sinh viên là duy nhất).
+- Cron Job tự động cập nhật trạng thái sự kiện (`UPCOMING` → `ONGOING` → `CLOSED`).
+- Tích hợp tài liệu API với Swagger UI.
 
-## T�nh nang n?i b?t
-- **�ang k� & Check-in**: Sinh vi�n nh?n QR code sau khi dang k�. H? tr? qu�t QR ho?c check-in th? c�ng.
-- **Import/Export Excel**: X? l� d? li?u danh s�ch tham gia qu� kh? nhanh ch�ng qua file Excel.
-- **Th?ng k�**: Dashboard t?ng quan s? lu?ng s? ki?n, t? l? tham gia v� danh s�ch ngu?i d�ng.
+## Tính năng nổi bật
 
-## C�i d?t v� ch?y v?i Docker (Khuy?n ngh?)
-1. C?u h�nh m�i tru?ng b?ng c�ch t?o file .env ? thu m?c g?c.
-2. Build v� ch?y c�c container:
-   `ash
+- **Đăng ký & Check-in**: Sinh viên nhận QR code sau khi đăng ký. Hỗ trợ quét QR hoặc check-in thủ công.
+- **Import/Export Excel**: Xử lý dữ liệu danh sách tham gia quá khứ nhanh chóng qua file Excel.
+- **Thống kê**: Dashboard tổng quan số lượng sự kiện, tỉ lệ tham gia và danh sách người dùng.
+
+## Cài đặt và chạy với Docker (Khuyến nghị)
+
+1. Cấu hình môi trường bằng cách tạo file `.env` ở thư mục gốc.
+
+2. Build và chạy các container:
+   ```bash
    docker-compose up -d --build
-   `
-3. Kh?i t?o Database (Migration) tr�n Docker:
-   `ash
-   docker exec nest_backend npm run typeorm migration:run
-   `
+   ```
 
+3. Khởi tạo Database (Migration) trên Docker:
+   ```bash
+   docker exec nest_backend npm run typeorm migration:run
+   ```
