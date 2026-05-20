@@ -19,6 +19,7 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
   });
+  app.setGlobalPrefix('api/v1');
 
   const config = new DocumentBuilder()
     .setTitle('Quản lý ngày rèn luyện API')
@@ -28,7 +29,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
-  app.setGlobalPrefix('api/v1');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
