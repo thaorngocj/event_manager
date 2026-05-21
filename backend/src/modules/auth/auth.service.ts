@@ -20,6 +20,7 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Email not found');
+    if (user.isActive === false) throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
 
     const valid = await this.usersService.validatePassword(user, password);
     if (!valid) throw new UnauthorizedException('Invalid password');
@@ -41,6 +42,8 @@ export class AuthService {
       }>(token);
 
       const user = await this.usersService.findById(payload.sub);
+      
+      if (user.isActive === false) throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
 
       const newPayload = {
         sub: user.id,

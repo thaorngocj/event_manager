@@ -12,7 +12,9 @@ import {
   UploadedFile,
   Request,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
@@ -22,7 +24,14 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Query } from '@nestjs/common';
 import { CalendarQueryDto } from './dto/calendar-query.dto';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+  ApiOperation,
+} from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 
 interface AuthRequest extends Request {
   user: {
@@ -46,9 +55,45 @@ export class EventsController {
   ) {
     return this.eventsService.findAll(+page, +limit, status, category, faculty);
   }
+
   @Get('calendar')
   getCalendar(@Query() query: CalendarQueryDto) {
     return this.eventsService.getCalendarEvents(query);
+  }
+
+  @Get('import-template')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Tải file Excel mẫu để import danh sách tham dự' })
+  async downloadTemplate(@Res() res: Response) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const buffer = await this.eventsService.getImportTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Import_Participants_Template.xlsx',
+    );
+    res.send(buffer);
+  }
+
+  @Get('import-template-events')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  async downloadEventTemplate(@Res() res: Response) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const buffer = await this.eventsService.getEventImportTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Import_Events_Template.xlsx',
+    );
+    res.send(buffer);
   }
 
   @Get(':id')
@@ -88,8 +133,8 @@ export class EventsController {
     return this.eventsService.remove(+id);
   }
 
-  // Import Excel
-  @Post(':id/import')
+  // Import Events hàng loạt
+  @Post('import')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @UseInterceptors(
@@ -103,20 +148,56 @@ export class EventsController {
       },
     }),
   )
+  async importEvents(@UploadedFile() file: any, @Request() req: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    return await this.eventsService.importEvents(file.buffer, req.user.id);
+  }
+
+  // Import Excel
+  @Post(':id/import')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Import danh sách tham dự từ file Excel' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'File Excel (.xlsx hoặc .xls)',
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(xlsx|xls)$/)) {
+          return cb(new BadRequestException('Chỉ cho phép file Excel'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
   async importParticipants(
     @Param('id') id: string,
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const fileName = file.originalname;
+    if (!file) {
+      throw new BadRequestException('Không tìm thấy file upload');
+    }
     return await this.eventsService.importParticipants(
       +id,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       file.buffer,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       req.user.id,
-      fileName,
+      file.originalname,
     );
   }
 
@@ -140,8 +221,17 @@ export class EventsController {
   @Get(':id/export')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN', 'EVENT_MANAGER')
-  async exportParticipants(@Param('id') id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return await this.eventsService.exportParticipants(+id);
+  async exportParticipants(@Param('id') id: string, @Res() res: Response) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const buffer = await this.eventsService.exportParticipants(+id);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Event_${id}_Participants.xlsx`,
+    );
+    res.send(buffer);
   }
 }

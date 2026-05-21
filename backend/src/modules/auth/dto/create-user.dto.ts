@@ -1,4 +1,3 @@
-// backend/src/modules/auth/dto/create-user.dto.ts
 import { IsEmail, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 
 export class CreateUserDto {
@@ -10,6 +9,9 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   password!: string;
+
+  @IsOptional()
+  mssv?: string;
 
   @IsOptional()
   @IsIn(['STUDENT', 'EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN'])

@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import {
   EVENT_CATEGORY_COLORS,
   EVENT_STATUS,
+  EVENT_CATEGORY,
 } from '../../constants/event.constants';
 import { UpdateEventDto } from './dto/update-event.dto'; // thêm dòng này
 
@@ -251,18 +252,32 @@ export class EventsService {
     };
   }
 
-  // IMPORT / EXPORT (giữ nguyên từ code cũ, đã improve)
-  async importParticipants(
-    eventId: number,
-    fileBuffer: Buffer,
-    importedBy: number,
-    fileName: string,
-  ) {
-    const event = await this.findOne(eventId);
+  // IMPORT / EXPORT
+  async getEventImportTemplate() {
+    const data = [
+      {
+        'STT': 1,
+        'Tên sự kiện': 'Hội thảo AI 2026',
+        'Mô tả': 'Giới thiệu AI',
+        'Địa điểm': 'Hội trường A',
+        'Ngày bắt đầu': '2026-06-01 08:00:00',
+        'Ngày kết thúc': '2026-06-01 11:30:00',
+        'Hạn đăng ký': '2026-05-31 23:59:59',
+        'Sức chứa': 200,
+        'Danh mục': 'ACADEMIC', 
+        'Quy mô': 'SCHOOL',
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Events Template');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  }
 
+  async importEvents(fileBuffer: Buffer, importedBy: number) {
     let data: any[] = [];
     try {
-      const workbook = XLSX.read(fileBuffer);
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       data = XLSX.utils.sheet_to_json(sheet);
     } catch {
@@ -275,6 +290,125 @@ export class EventsService {
     let successCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
+    const createdEvents: Event[] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const title = row['Tên sự kiện'] || row['Title'];
+        if (!title) {
+          failedCount++;
+          errors.push(`Dòng ${i + 2}: Thiếu tên sự kiện`);
+          continue;
+        }
+
+        const startDateStr = row['Ngày bắt đầu'] || row['Start Date'];
+        const endDateStr = row['Ngày kết thúc'] || row['End Date'];
+        
+        if (!startDateStr || !endDateStr) {
+          failedCount++;
+          errors.push(`Dòng ${i + 2}: Thiếu ngày bắt đầu hoặc kết thúc`);
+          continue;
+        }
+
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          failedCount++;
+          errors.push(`Dòng ${i + 2}: Định dạng ngày không hợp lệ`);
+          continue;
+        }
+
+        let registrationDeadline: Date | null = null;
+        if (row['Hạn đăng ký']) {
+          const parsed = new Date(row['Hạn đăng ký']);
+          if (!isNaN(parsed.getTime())) {
+            registrationDeadline = parsed;
+          }
+        }
+
+        const maxParticipants = parseInt(row['Sức chứa']) || null;
+        
+        const eventCategory = Object.values(EVENT_CATEGORY).includes(row['Danh mục']) 
+          ? row['Danh mục'] 
+          : EVENT_CATEGORY.ACADEMIC;
+
+        const scale = row['Quy mô'] || 'SCHOOL';
+
+        const event = this.repo.create({
+          title,
+          description: row['Mô tả'] || '',
+          location: row['Địa điểm'] || 'Chưa xác định',
+          startDate,
+          endDate,
+          registrationDeadline: registrationDeadline || undefined,
+          maxParticipants: maxParticipants || undefined,
+          eventCategory: eventCategory as any,
+          scale: scale as any,
+          status: EVENT_STATUS.UPCOMING,
+          createdBy: importedBy,
+        });
+
+        const savedEvent = await this.repo.save(event);
+        createdEvents.push(savedEvent as any);
+        successCount++;
+      } catch (err: any) {
+        failedCount++;
+        errors.push(`Dòng ${i + 2}: Lỗi hệ thống (${err.message})`);
+      }
+    }
+
+    return {
+      message: `Import hoàn tất: ${successCount} thành công, ${failedCount} thất bại`,
+      successCount,
+      failedCount,
+      errors: errors.slice(0, 20),
+    };
+  }
+
+  async getImportTemplate() {
+    const data = [
+      {
+        'STT': 1,
+        'Họ tên': 'Nguyễn Văn A',
+        'Email': 'student@school.edu.vn',
+        'MSSV': '217IT01010',
+        'Khoa/Viện': 'Khoa Công nghệ thông tin',
+        'Thời gian đăng ký': '2026-05-20 08:00:00',
+        'Thời gian check-in': '2026-05-20 09:00:00',
+        'Trạng thái': 'Đã tham gia' // Hoặc 'Đã đăng ký'
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  }
+
+  async importParticipants(
+    eventId: number,
+    fileBuffer: Buffer,
+    importedBy: number,
+    fileName: string,
+  ) {
+    const event = await this.findOne(eventId);
+
+    let data: any[] = [];
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      data = XLSX.utils.sheet_to_json(sheet);
+    } catch {
+      throw new BadRequestException('File Excel không đúng định dạng');
+    }
+
+    if (data.length === 0)
+      throw new BadRequestException('File không có dữ liệu');
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+    let currentRegisteredCount = event.registeredCount;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -302,17 +436,36 @@ export class EventsService {
         continue;
       }
 
+      if (event.maxParticipants && currentRegisteredCount >= event.maxParticipants) {
+        failedCount++;
+        errors.push(`Dòng ${i + 2}: Vượt quá sức chứa sự kiện`);
+        continue;
+      }
+
+      const rawStatus = String(row['Trạng thái'] || row['Status'] || row.status || 'Đã tham gia').trim();
+      const status = rawStatus === 'Đã đăng ký' || rawStatus === 'REGISTERED' || rawStatus === 'Chưa check-in' 
+        ? 'REGISTERED' 
+        : 'CHECKED_IN';
+      
+      const registeredAt = row['Thời gian đăng ký'] ? new Date(row['Thời gian đăng ký']) : new Date();
+      let checkedInAt: Date | undefined = undefined;
+      if (status === 'CHECKED_IN') {
+        checkedInAt = row['Thời gian check-in'] ? new Date(row['Thời gian check-in']) : new Date();
+      }
+
       const registration = this.registrationRepo.create({
         userId: user.id,
         eventId,
-        status: 'CHECKED_IN',
-        checkedInAt: new Date(),
-        checkedBy: importedBy,
+        status: status as any,
+        registeredAt,
+        checkedInAt: checkedInAt as any,
+        checkedBy: status === 'CHECKED_IN' ? importedBy : (undefined as any),
       });
       await this.registrationRepo.save(registration);
 
       // Cập nhật registeredCount
       await this.repo.increment({ id: eventId }, 'registeredCount', 1);
+      currentRegisteredCount++;
 
       successCount++;
     }

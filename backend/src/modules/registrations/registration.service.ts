@@ -93,7 +93,7 @@ export class RegistrationService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (user && user.email) {
       this.mailService
-        .sendEventRegistrationNotification(user.email, event.title)
+        .sendEventRegistrationNotification(user.email, event.title, qrCode)
         .catch(console.error);
     }
 
@@ -125,11 +125,12 @@ export class RegistrationService {
         eventId,
         userId,
       },
+      relations: ['event'],
     });
 
     if (!registration) throw new NotFoundException('Đăng ký không hợp lệ');
-    if (registration.status === 'CHECKED_IN')
-      throw new BadRequestException('Đã check-in rồi');
+    if (registration.event.status !== EVENT_STATUS.ONGOING) throw new BadRequestException('Sự kiện chưa diễn ra hoặc đã kết thúc');
+    if (registration.status === 'CHECKED_IN') throw new BadRequestException('Đã check-in rồi');
 
     registration.status = 'CHECKED_IN';
     registration.checkedInAt = new Date();
@@ -195,10 +196,11 @@ export class RegistrationService {
 
     const registration = await this.repo.findOne({
       where: { userId: user.id, eventId },
+      relations: ['event'],
     });
     if (!registration) throw new NotFoundException('Sinh viên chưa đăng ký');
-    if (registration.status === 'CHECKED_IN')
-      throw new BadRequestException('Đã check-in rồi');
+    if (registration.event.status !== EVENT_STATUS.ONGOING) throw new BadRequestException('Sự kiện chưa diễn ra hoặc đã kết thúc');
+    if (registration.status === 'CHECKED_IN') throw new BadRequestException('Đã check-in rồi');
 
     registration.status = 'CHECKED_IN';
     registration.checkedInAt = new Date();

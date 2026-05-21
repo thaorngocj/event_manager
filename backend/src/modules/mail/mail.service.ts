@@ -42,7 +42,7 @@ export class MailService {
     }
   }
 
-  async sendEventRegistrationNotification(to: string, eventTitle: string) {
+  async sendEventRegistrationNotification(to: string, eventTitle: string, qrCode: string) {
     const mailOptions = {
       from: `"Event Manager" <${process.env.SMTP_USER || 'no-reply@event.com'}>`,
       to: to,
@@ -50,7 +50,11 @@ export class MailService {
       html: `
         <h3>Chúc mừng!</h3>
         <p>Bạn đã đăng ký thành công sự kiện <strong>${eventTitle}</strong>.</p>
-        <p>Vui lòng đăng nhập vào hệ thống để lấy mã QR điểm danh của bạn.</p>
+        <p>Dưới đây là mã QR điểm danh của bạn, vui lòng lưu lại để sử dụng khi tham gia sự kiện:</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <img src="${qrCode}" alt="QR Code Điểm Danh" style="max-width: 200px;" />
+        </div>
+        <p>Vui lòng đăng nhập vào hệ thống nếu bạn cần xem chi tiết sự kiện.</p>
       `,
     };
 
