@@ -32,7 +32,7 @@ import {
 import { UsersService } from './users.service';
 export interface AuthRequest extends Request {
   user: {
-    userId: number;
+    id: number;
     email?: string;
     role?: string;
   };
@@ -69,7 +69,7 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: 'Xem profile của user đang đăng nhập' })
   getMe(@Request() req: AuthRequest) {
-    return this.usersService.findById(req.user.userId);
+    return this.usersService.findById(req.user.id);
   }
 
   // SUPER_ADMIN / ADMIN: xem bất kỳ user
@@ -85,7 +85,7 @@ export class UsersController {
   @Patch('me')
   @ApiOperation({ summary: 'Cập nhật username/email của chính mình' })
   updateMe(@Request() req: AuthRequest, @Body() dto: UpdateUserDto) {
-    return this.usersService.updateUser(req.user.userId, dto);
+    return this.usersService.updateUser(req.user.id, dto);
   }
 
   // SUPER_ADMIN: cập nhật profile user

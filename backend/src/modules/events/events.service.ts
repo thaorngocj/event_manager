@@ -124,17 +124,22 @@ export class EventsService {
   }
 
   async findAll(page = 1, limit = 20, status?: string, category?: string, faculty?: string) {
-    const where: Record<string, any> = {};
-    if (status) where.status = status;
-    if (category) where.eventCategory = category;
-    if (faculty) where.faculty = faculty;
+    const qb = this.repo.createQueryBuilder('event');
 
-    const [data, total] = await this.repo.findAndCount({
-      where: Object.keys(where).length ? where : undefined,
-      order: { startDate: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    if (status) {
+      qb.andWhere('event.status = :status', { status });
+    }
+    if (category) {
+      qb.andWhere('event.eventCategory = :category', { category });
+    }
+    if (faculty) {
+      qb.andWhere('event.faculty = :faculty', { faculty });
+    }
+
+    qb.orderBy('event.startDate', 'ASC');
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       data,
@@ -274,7 +279,7 @@ export class EventsService {
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   }
 
-  async importEvents(fileBuffer: Buffer, importedBy: number) {
+  async importEvents(fileBuffer: Buffer, importedBy: number, fileName: string = 'events_import.xlsx') {
     let data: any[] = [];
     try {
       const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -357,6 +362,17 @@ export class EventsService {
         errors.push(`Dòng ${i + 2}: Lỗi hệ thống (${err.message})`);
       }
     }
+
+    const history = this.importHistoryRepo.create({
+      eventId: null as any,
+      importedBy,
+      fileName,
+      totalRows: data.length,
+      successCount,
+      failedCount,
+      errors: errors.slice(0, 10).join('; '),
+    });
+    await this.importHistoryRepo.save(history);
 
     return {
       message: `Import hoàn tất: ${successCount} thành công, ${failedCount} thất bại`,

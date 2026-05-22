@@ -14,10 +14,10 @@ export class ImportHistory {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column()
+  @Column({ nullable: true })
   eventId!: number;
 
-  @ManyToOne(() => Event)
+  @ManyToOne(() => Event, { nullable: true })
   @JoinColumn({ name: 'eventId' })
   event!: Event;
 

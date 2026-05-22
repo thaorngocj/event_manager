@@ -150,7 +150,7 @@ export class EventsController {
   )
   async importEvents(@UploadedFile() file: any, @Request() req: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return await this.eventsService.importEvents(file.buffer, req.user.id);
+    return await this.eventsService.importEvents(file.buffer, req.user.id, file.originalname);
   }
 
   // Import Excel
