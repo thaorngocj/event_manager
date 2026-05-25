@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -122,15 +121,19 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: UpdateEventDto) {
-    return this.eventsService.update(+id, body);
+  update(
+    @Param('id') id: string,
+    @Body() body: UpdateEventDto,
+    @Request() req: AuthRequest,
+  ) {
+    return this.eventsService.update(+id, body, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.eventsService.remove(+id);
+  remove(@Param('id') id: string, @Request() req: AuthRequest) {
+    return this.eventsService.remove(+id, req.user.id);
   }
 
   // Import Events hàng loạt
@@ -148,9 +151,15 @@ export class EventsController {
       },
     }),
   )
-  async importEvents(@UploadedFile() file: any, @Request() req: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return await this.eventsService.importEvents(file.buffer, req.user.id, file.originalname);
+  async importEvents(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: AuthRequest,
+  ) {
+    return await this.eventsService.importEvents(
+      file.buffer,
+      req.user.id,
+      file.originalname,
+    );
   }
 
   // Import Excel
@@ -187,7 +196,7 @@ export class EventsController {
   async importParticipants(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
-    @Request() req: any,
+    @Request() req: AuthRequest,
   ) {
     if (!file) {
       throw new BadRequestException('Không tìm thấy file upload');
@@ -195,7 +204,6 @@ export class EventsController {
     return await this.eventsService.importParticipants(
       +id,
       file.buffer,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       req.user.id,
       file.originalname,
     );
@@ -221,9 +229,16 @@ export class EventsController {
   @Get(':id/export')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN', 'EVENT_MANAGER')
-  async exportParticipants(@Param('id') id: string, @Res() res: Response) {
+  async exportParticipants(
+    @Param('id') id: string,
+    @Request() req: AuthRequest,
+    @Res() res: Response,
+  ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const buffer = await this.eventsService.exportParticipants(+id);
+    const buffer = await this.eventsService.exportParticipants(
+      +id,
+      req.user.id,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

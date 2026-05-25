@@ -11,6 +11,7 @@ import { Event } from './event.entity';
 import { ImportHistory } from './history.event.entity';
 import { Registration } from '../registrations/registration.entity';
 import { User } from '../users/user.entity';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { CalendarQueryDto } from './dto/calendar-query.dto';
 import * as XLSX from 'xlsx';
 import {
@@ -31,6 +32,7 @@ export class EventsService {
     private registrationRepo: Repository<Registration>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
 
   // CRON: Tự động cập nhật status
@@ -118,9 +120,21 @@ export class EventsService {
       eventCategory: data.eventCategory ?? ('ACADEMIC' as any),
       scale: data.scale ?? ('SCHOOL' as any),
       status: data.status ?? EVENT_STATUS.UPCOMING,
+      createdBy: data.createdBy,
     });
 
-    return this.repo.save(event);
+    return this.repo.save(event).then((saved) => {
+      if (data.createdBy) {
+        this.activityLogsService.logAction(
+          data.createdBy,
+          'CREATE_EVENT',
+          'Event',
+          saved.id.toString(),
+          { title: saved.title }
+        ).catch(() => {});
+      }
+      return saved;
+    });
   }
 
   async findAll(page = 1, limit = 20, status?: string, category?: string, faculty?: string) {
@@ -156,7 +170,7 @@ export class EventsService {
     return event;
   }
 
-  async update(id: number, data: UpdateEventDto) {
+  async update(id: number, data: UpdateEventDto, userId?: number) {
     const existing = await this.findOne(id);
 
     const start = data.startDate
@@ -184,11 +198,31 @@ export class EventsService {
       registrationDeadline: deadline,
     });
 
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+    if (userId) {
+      this.activityLogsService.logAction(
+        userId,
+        'UPDATE_EVENT',
+        'Event',
+        id.toString(),
+        { title: updated.title }
+      ).catch(() => {});
+    }
+    return updated;
   }
 
-  async remove(id: number) {
+  async remove(id: number, userId?: number) {
+    const event = await this.findOne(id);
     await this.repo.delete(id);
+    if (userId) {
+      this.activityLogsService.logAction(
+        userId,
+        'DELETE_EVENT',
+        'Event',
+        id.toString(),
+        { title: event.title }
+      ).catch(() => {});
+    }
     return { message: 'Deleted' };
   }
 
@@ -374,6 +408,14 @@ export class EventsService {
     });
     await this.importHistoryRepo.save(history);
 
+    this.activityLogsService.logAction(
+      importedBy,
+      'IMPORT_EVENTS',
+      'Event',
+      undefined,
+      { fileName, successCount, failedCount }
+    ).catch(() => {});
+
     return {
       message: `Import hoàn tất: ${successCount} thành công, ${failedCount} thất bại`,
       successCount,
@@ -497,6 +539,14 @@ export class EventsService {
     });
     await this.importHistoryRepo.save(history);
 
+    this.activityLogsService.logAction(
+      importedBy,
+      'IMPORT_PARTICIPANTS',
+      'Event',
+      eventId.toString(),
+      { fileName, successCount, failedCount, eventTitle: event.title }
+    ).catch(() => {});
+
     return {
       message: `Import hoàn tất: ${successCount} thành công, ${failedCount} thất bại`,
       eventId,
@@ -525,13 +575,23 @@ export class EventsService {
     }));
   }
 
-  async exportParticipants(eventId: number) {
+  async exportParticipants(eventId: number, exportedBy?: number) {
     const event = await this.findOne(eventId);
 
     const registrations = await this.registrationRepo.find({
       where: { eventId },
       relations: ['user'],
     });
+
+    if (exportedBy) {
+      this.activityLogsService.logAction(
+        exportedBy,
+        'EXPORT_PARTICIPANTS',
+        'Event',
+        eventId.toString(),
+        { title: event.title, totalExported: registrations.length }
+      ).catch(() => {});
+    }
 
     const data = registrations.map((reg, idx) => ({
       STT: idx + 1,
