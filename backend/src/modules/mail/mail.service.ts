@@ -49,7 +49,6 @@ export class MailService {
     qrCode: string,
   ) {
     if (process.env.NODE_ENV === 'test') return;
-    const base64Data = qrCode.split(',')[1];
 
     const mailOptions = {
       from: `"Event Manager" <${process.env.SMTP_USER || 'no-reply@event.com'}>`,
@@ -60,16 +59,15 @@ export class MailService {
         <p>Bạn đã đăng ký thành công sự kiện <strong>${eventTitle}</strong>.</p>
         <p>Dưới đây là mã QR điểm danh của bạn, vui lòng lưu lại để sử dụng khi tham gia sự kiện:</p>
         <div style="text-align: center; margin: 20px 0;">
-          <img src="cid:qrcode@event.manager" alt="QR Code Điểm Danh" style="max-width: 200px;" />
+          <img src="cid:qrcode_image" alt="QR Code Điểm Danh" style="max-width: 200px;" />
         </div>
         <p>Vui lòng đăng nhập vào hệ thống nếu bạn cần xem chi tiết sự kiện.</p>
       `,
       attachments: [
         {
           filename: 'qrcode.png',
-          content: base64Data,
-          encoding: 'base64',
-          cid: 'qrcode@event.manager',
+          path: qrCode,
+          cid: 'qrcode_image',
         },
       ],
     };
