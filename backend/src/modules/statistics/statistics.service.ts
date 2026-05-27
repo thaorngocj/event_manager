@@ -77,4 +77,53 @@ export class StatisticsService {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return result;
   }
+
+  async getEventsCountByCategoryAndMonth() {
+    type EventStatsRaw = {
+      year: string;
+      month: string;
+      category: string;
+      count: string;
+    };
+
+    const result: EventStatsRaw[] = await this.eventRepo
+      .createQueryBuilder('e')
+      .select('EXTRACT(YEAR FROM e.startDate)', 'year')
+      .addSelect('EXTRACT(MONTH FROM e.startDate)', 'month')
+      .addSelect('e.eventCategory', 'category')
+      .addSelect('COUNT(e.id)', 'count')
+      .groupBy('EXTRACT(YEAR FROM e.startDate)')
+      .addGroupBy('EXTRACT(MONTH FROM e.startDate)')
+      .addGroupBy('e.eventCategory')
+      .orderBy('year', 'ASC')
+      .addOrderBy('month', 'ASC')
+      .getRawMany();
+
+    return result.map((r) => ({
+      year: Number(r.year),
+      month: Number(r.month),
+      category: r.category,
+      count: Number(r.count),
+    }));
+  }
+
+  async getRegistrationsCountByCategory() {
+    type RegistrationStatsRaw = {
+      category: string;
+      count: string;
+    };
+
+    const result: RegistrationStatsRaw[] = await this.registrationRepo
+      .createQueryBuilder('r')
+      .innerJoin('r.event', 'e')
+      .select('e.eventCategory', 'category')
+      .addSelect('COUNT(r.id)', 'count')
+      .groupBy('e.eventCategory')
+      .getRawMany();
+
+    return result.map((r) => ({
+      category: r.category,
+      count: Number(r.count),
+    }));
+  }
 }

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -27,6 +27,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   @ApiOperation({ summary: 'Làm mới access token bằng refresh token' })
+  @ApiBody({ schema: { type: 'object', properties: { refreshToken: { type: 'string' } }, required: ['refreshToken'] } })
   @ApiResponse({ status: 200, description: 'Làm mới token thành công' })
   @ApiResponse({ status: 401, description: 'Refresh token không hợp lệ' })
   async refresh(@Body('refreshToken') refreshToken: string) {
@@ -39,6 +40,7 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Yêu cầu đặt lại mật khẩu' })
+  @ApiBody({ schema: { type: 'object', properties: { email: { type: 'string', example: 'admin@school.edu.vn' } }, required: ['email'] } })
   @ApiResponse({ status: 200, description: 'Gửi email thành công' })
   async forgotPassword(@Body('email') email: string) {
     if (!email) throw new UnauthorizedException('Email required');
@@ -48,6 +50,7 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Đặt lại mật khẩu với token' })
+  @ApiBody({ schema: { type: 'object', properties: { token: { type: 'string' }, newPassword: { type: 'string' } }, required: ['token', 'newPassword'] } })
   @ApiResponse({ status: 200, description: 'Đặt lại mật khẩu thành công' })
   @ApiResponse({
     status: 400,

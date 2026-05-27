@@ -45,6 +45,9 @@ export class EventsController {
   constructor(private eventsService: EventsService) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'Lấy danh sách tất cả các sự kiện (có phân trang và lọc)',
+  })
   findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
@@ -56,6 +59,7 @@ export class EventsController {
   }
 
   @Get('calendar')
+  @ApiOperation({ summary: 'Lấy danh sách sự kiện hiển thị trên lịch' })
   getCalendar(@Query() query: CalendarQueryDto) {
     return this.eventsService.getCalendarEvents(query);
   }
@@ -81,6 +85,7 @@ export class EventsController {
   @Get('import-template-events')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Tải file Excel mẫu để import danh sách sự kiện' })
   async downloadEventTemplate(@Res() res: Response) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const buffer = await this.eventsService.getEventImportTemplate();
@@ -96,6 +101,7 @@ export class EventsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết một sự kiện' })
   findOne(@Param('id') id: string) {
     return this.eventsService.findOne(+id);
   }
@@ -103,6 +109,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Post()
+  @ApiOperation({ summary: 'Tạo sự kiện mới' })
   create(@Body() body: CreateEventDto, @Request() req: AuthRequest) {
     const eventData = {
       ...body,
@@ -121,6 +128,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Patch(':id')
+  @ApiOperation({ summary: 'Cập nhật thông tin sự kiện' })
   update(
     @Param('id') id: string,
     @Body() body: UpdateEventDto,
@@ -132,6 +140,7 @@ export class EventsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Delete(':id')
+  @ApiOperation({ summary: 'Xóa sự kiện' })
   remove(@Param('id') id: string, @Request() req: AuthRequest) {
     return this.eventsService.remove(+id, req.user.id);
   }
@@ -140,6 +149,21 @@ export class EventsController {
   @Post('import')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Import danh sách sự kiện hàng loạt từ file Excel' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'File Excel (.xlsx hoặc .xls)',
+        },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -213,6 +237,7 @@ export class EventsController {
   @Get(':id/registrations')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Xem danh sách sinh viên đã đăng ký sự kiện' })
   async getRegistrations(@Param('id') id: string) {
     return await this.eventsService.getRegistrations(+id);
   }
@@ -221,6 +246,7 @@ export class EventsController {
   @Get(':id/import-history')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Xem lịch sử import file của sự kiện' })
   async getImportHistory(@Param('id') id: string) {
     return await this.eventsService.getImportHistory(+id);
   }
@@ -229,6 +255,7 @@ export class EventsController {
   @Get(':id/export')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN', 'EVENT_MANAGER')
+  @ApiOperation({ summary: 'Xuất danh sách sinh viên tham dự ra file Excel' })
   async exportParticipants(
     @Param('id') id: string,
     @Request() req: AuthRequest,
