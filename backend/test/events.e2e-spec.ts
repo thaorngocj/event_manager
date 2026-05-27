@@ -1,16 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+import request, { Response } from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  role: string;
+}
+
+interface EventResponse {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  eventCategory: string;
+}
+
+interface EventsListResponse {
+  data: EventResponse[];
+}
 
 describe('EventsController (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let accessToken: string;
   let eventId: string;
+  let server: Parameters<typeof request>[0];
 
   jest.setTimeout(30000);
 
@@ -22,29 +43,39 @@ describe('EventsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
+    server = app.getHttpServer() as Parameters<typeof request>[0];
+
     dataSource = app.get<DataSource>(getDataSourceToken());
+
     await dataSource.synchronize(true);
 
     const hashed = await bcrypt.hash('adminpass', 10);
+
     await dataSource.query(
-      `INSERT INTO "user" (email, password, username, role) VALUES ('admin@test.com', $1, 'Admin Test', 'ADMIN')`,
+      `INSERT INTO "user" (email, password, username, role)
+       VALUES ('admin@test.com', $1, 'Admin Test', 'ADMIN')`,
       [hashed],
     );
 
-    const loginResponse = await request(app.getHttpServer())
+    const loginResponse: Response = await request(server)
       .post('/auth/login')
-      .send({ email: 'admin@test.com', password: 'adminpass' })
+      .send({
+        email: 'admin@test.com',
+        password: 'adminpass',
+      })
       .expect(200);
 
-    accessToken = loginResponse.body.accessToken;
+    const loginBody = loginResponse.body as LoginResponse;
+
+    accessToken = loginBody.accessToken;
   });
 
   afterAll(async () => {
-    if (app) await app.close();
+    await app.close();
   });
 
-  it('/api/v1/events (POST) - Create Event', async () => {
-    const response = await request(app.getHttpServer())
+  it('/events (POST) - Create Event', async () => {
+    const response: Response = await request(server)
       .post('/events')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
@@ -57,32 +88,37 @@ describe('EventsController (e2e)', () => {
       })
       .expect(201);
 
-    expect(response.body).toHaveProperty('id');
-    expect(response.body.title).toBe('E2E Test Event');
-    eventId = response.body.id;
+    const body = response.body as EventResponse;
+
+    expect(body).toHaveProperty('id');
+    expect(body.title).toBe('E2E Test Event');
+
+    eventId = body.id;
   });
 
-  it('/api/v1/events (GET) - List Events', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/events')
-      .expect(200);
+  it('/events (GET) - List Events', async () => {
+    const response: Response = await request(server).get('/events').expect(200);
 
-    expect(Array.isArray(response.body.data)).toBe(true);
-    expect(response.body.data.length).toBeGreaterThan(0);
-    expect(response.body.data[0].title).toBe('E2E Test Event');
+    const body = response.body as EventsListResponse;
+
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThan(0);
+    expect(body.data[0]?.title).toBe('E2E Test Event');
   });
 
-  it('/api/v1/events/:id (GET) - Get Event', async () => {
-    const response = await request(app.getHttpServer())
+  it('/events/:id (GET) - Get Event', async () => {
+    const response: Response = await request(server)
       .get(`/events/${eventId}`)
       .expect(200);
 
-    expect(response.body.id).toBe(eventId);
-    expect(response.body.title).toBe('E2E Test Event');
+    const body = response.body as EventResponse;
+
+    expect(body.id).toBe(eventId);
+    expect(body.title).toBe('E2E Test Event');
   });
 
-  it('/api/v1/events/:id (PATCH) - Update Event', async () => {
-    const response = await request(app.getHttpServer())
+  it('/events/:id (PATCH) - Update Event', async () => {
+    const response: Response = await request(server)
       .patch(`/events/${eventId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
@@ -90,18 +126,18 @@ describe('EventsController (e2e)', () => {
       })
       .expect(200);
 
-    expect(response.body.title).toBe('Updated E2E Test Event');
+    const body = response.body as EventResponse;
+
+    expect(body.title).toBe('Updated E2E Test Event');
   });
 
-  it('/api/v1/events/:id (DELETE) - Delete Event', async () => {
-    await request(app.getHttpServer())
+  it('/events/:id (DELETE) - Delete Event', async () => {
+    await request(server)
       .delete(`/events/${eventId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
-    // Verify it's deleted
-    await request(app.getHttpServer())
-      .get(`/events/${eventId}`)
-      .expect(404);
+    // Verify deleted
+    await request(server).get(`/events/${eventId}`).expect(404);
   });
 });
