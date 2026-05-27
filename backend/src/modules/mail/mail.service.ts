@@ -19,6 +19,7 @@ export class MailService {
   }
 
   async sendPasswordResetEmail(to: string, token: string) {
+    if (process.env.NODE_ENV === 'test') return;
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     const mailOptions = {
       from: `"Event Manager" <${process.env.SMTP_USER || 'no-reply@event.com'}>`,
@@ -43,6 +44,7 @@ export class MailService {
   }
 
   async sendEventRegistrationNotification(to: string, eventTitle: string, qrCode: string) {
+    if (process.env.NODE_ENV === 'test') return;
     const mailOptions = {
       from: `"Event Manager" <${process.env.SMTP_USER || 'no-reply@event.com'}>`,
       to: to,
