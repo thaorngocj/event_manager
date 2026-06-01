@@ -100,6 +100,12 @@ export class EventsController {
     res.send(buffer);
   }
 
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết sự kiện qua slug' })
+  findBySlug(@Param('slug') slug: string) {
+    return this.eventsService.findBySlug(slug);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết một sự kiện' })
   findOne(@Param('id') id: string) {

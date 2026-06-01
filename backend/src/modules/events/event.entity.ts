@@ -31,6 +31,9 @@ export class Event {
   @Column({ length: 255 })
   title!: string;
 
+  @Column({ length: 255, unique: true, nullable: true })
+  slug!: string;
+
   @Column({ type: 'text', nullable: true })
   description?: string;
 

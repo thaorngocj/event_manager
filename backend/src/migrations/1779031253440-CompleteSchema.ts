@@ -4,9 +4,6 @@ export class CompleteSchema1779031253440 implements MigrationInterface {
   name = 'CompleteSchema1779031253440';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // ============================================================
-    // 1. Thêm các cột còn thiếu vào bảng "user"
-    // ============================================================
     await queryRunner.query(`
       ALTER TABLE "user"
         ADD COLUMN IF NOT EXISTS "isActive" boolean NOT NULL DEFAULT true,
@@ -15,11 +12,6 @@ export class CompleteSchema1779031253440 implements MigrationInterface {
         ADD COLUMN IF NOT EXISTS "resetPasswordToken" character varying,
         ADD COLUMN IF NOT EXISTS "resetPasswordExpires" TIMESTAMP WITH TIME ZONE
     `);
-
-    // ============================================================
-    // 2. Tạo bảng "events" (thay thế bảng "event" cũ)
-    //    Entity dùng @Entity('events') nên tên bảng là "events"
-    // ============================================================
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "events" (
         "id"                   SERIAL NOT NULL,
@@ -64,10 +56,7 @@ export class CompleteSchema1779031253440 implements MigrationInterface {
         ON "events" ("status")
     `);
 
-    // ============================================================
     // 3. Tạo bảng "registration"
-    //    Entity dùng @Entity() không đặt tên → TypeORM mặc định là "registration"
-    // ============================================================
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "registration" (
         "id"           SERIAL NOT NULL,
@@ -86,9 +75,7 @@ export class CompleteSchema1779031253440 implements MigrationInterface {
       )
     `);
 
-    // ============================================================
     // 4. Tạo bảng "import_history"
-    // ============================================================
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "import_history" (
         "id"           SERIAL NOT NULL,
@@ -115,13 +102,25 @@ export class CompleteSchema1779031253440 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "registration"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_events_status"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_events_eventCategory"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_events_startDate_endDate"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_events_startDate_endDate"`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "events"`);
 
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "resetPasswordExpires"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "resetPasswordToken"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "updatedAt"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "createdAt"`);
-    await queryRunner.query(`ALTER TABLE "user" DROP COLUMN IF EXISTS "isActive"`);
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "resetPasswordExpires"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "resetPasswordToken"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "updatedAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "createdAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user" DROP COLUMN IF EXISTS "isActive"`,
+    );
   }
 }

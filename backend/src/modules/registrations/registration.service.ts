@@ -150,6 +150,7 @@ export class RegistrationService {
     return registrations.map((reg) => ({
       id: reg.id,
       eventId: reg.eventId,
+      userId: reg.userId,
       eventTitle: reg.event?.title,
       eventDate: reg.event?.startDate,
       status: reg.status,

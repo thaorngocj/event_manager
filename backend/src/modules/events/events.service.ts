@@ -21,6 +21,20 @@ import {
 } from '../../constants/event.constants';
 import { UpdateEventDto } from './dto/update-event.dto'; // thêm dòng này
 
+function slugify(text: string): string {
+  let slug = text.toLowerCase();
+  slug = slug.replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, 'a');
+  slug = slug.replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, 'e');
+  slug = slug.replace(/i|í|ì|ỉ|ĩ|ị/gi, 'i');
+  slug = slug.replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, 'o');
+  slug = slug.replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, 'u');
+  slug = slug.replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y');
+  slug = slug.replace(/đ/gi, 'd');
+  slug = slug.replace(/[^a-z0-9 ]/g, '');
+  slug = slug.replace(/\s+/g, '-');
+  return slug;
+}
+
 @Injectable()
 export class EventsService {
   constructor(
@@ -76,8 +90,24 @@ export class EventsService {
       .execute();
   }
 
+  private async generateUniqueSlug(title: string, currentId?: number): Promise<string> {
+    const baseSlug = slugify(title);
+    let slug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const qb = this.repo.createQueryBuilder('e').where('e.slug = :slug', { slug });
+      if (currentId) {
+        qb.andWhere('e.id != :id', { id: currentId });
+      }
+      const existing = await qb.getOne();
+      if (!existing) return slug;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+  }
+
   // CRUD
-  create(data: Partial<Event>) {
+  async create(data: Partial<Event>) {
     if (!data.startDate || !data.endDate) {
       throw new BadRequestException('Thiếu startDate hoặc endDate');
     }
@@ -111,8 +141,11 @@ export class EventsService {
       registrationDeadline = parsed;
     }
 
+    const slug = await this.generateUniqueSlug(data.title || 'event');
+
     const event = this.repo.create({
       ...data,
+      slug,
       startDate,
       endDate,
       registrationDeadline,
@@ -170,6 +203,12 @@ export class EventsService {
     return event;
   }
 
+  async findBySlug(slug: string) {
+    const event = await this.repo.findOne({ where: { slug } });
+    if (!event) throw new NotFoundException('Event not found');
+    return event;
+  }
+
   async update(id: number, data: UpdateEventDto, userId?: number) {
     const existing = await this.findOne(id);
 
@@ -191,8 +230,14 @@ export class EventsService {
         'registrationDeadline phải trước startDate',
       );
 
+    let slug = existing.slug;
+    if (data.title && data.title !== existing.title) {
+      slug = await this.generateUniqueSlug(data.title, id);
+    }
+
     await this.repo.update(id, {
       ...data,
+      slug,
       startDate: start,
       endDate: end,
       registrationDeadline: deadline,
