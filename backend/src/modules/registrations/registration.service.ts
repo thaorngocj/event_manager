@@ -36,10 +36,11 @@ export class RegistrationService {
       throw new BadRequestException('Sự kiện đã bị huỷ');
     }
 
-    if (
-      event.registrationDeadline &&
-      new Date() > new Date(event.registrationDeadline)
-    ) {
+    const deadline = event.registrationDeadline
+      ? new Date(event.registrationDeadline)
+      : new Date(event.startDate);
+
+    if (new Date() > deadline) {
       throw new BadRequestException('Đã quá hạn đăng ký');
     }
 

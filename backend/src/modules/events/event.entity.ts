@@ -12,6 +12,7 @@ import {
   DISPLAY_CATEGORY,
   SCALE,
 } from '../../constants/event.constants';
+import { Expose } from 'class-transformer';
 import type {
   DisplayCategory,
   EventCategory,
@@ -116,6 +117,7 @@ export class Event {
   createdBy?: number; // userId của admin tạo event
 
   // Computed helper (không lưu DB)
+  @Expose()
   get isRegistrationOpen(): boolean {
     const now = new Date();
     const deadline = this.registrationDeadline ?? this.startDate;
@@ -130,6 +132,7 @@ export class Event {
     );
   }
 
+  @Expose()
   get isFull(): boolean {
     return (
       this.maxParticipants != null &&
