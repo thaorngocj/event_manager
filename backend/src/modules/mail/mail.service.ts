@@ -18,9 +18,10 @@ export class MailService {
     });
   }
 
-  async sendPasswordResetEmail(to: string, token: string) {
+  async sendPasswordResetEmail(to: string, token: string, clientUrl?: string) {
     if (process.env.NODE_ENV === 'test') return;
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const base = clientUrl || process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${base.replace(/\/$/, '')}/reset-password?token=${token}`;
     const mailOptions = {
       from: `"Event Manager" <${process.env.SMTP_USER || 'no-reply@event.com'}>`,
       to: to,

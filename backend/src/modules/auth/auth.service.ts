@@ -68,7 +68,7 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, clientUrl?: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       return {
@@ -82,7 +82,7 @@ export class AuthService {
     expires.setHours(expires.getHours() + 1); // 1 hour
 
     await this.usersService.setResetToken(user.id, token, expires);
-    await this.mailService.sendPasswordResetEmail(user.email, token);
+    await this.mailService.sendPasswordResetEmail(user.email, token, clientUrl);
 
     return {
       message:

@@ -40,11 +40,14 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(200)
   @ApiOperation({ summary: 'Yêu cầu đặt lại mật khẩu' })
-  @ApiBody({ schema: { type: 'object', properties: { email: { type: 'string', example: 'admin@school.edu.vn' } }, required: ['email'] } })
+  @ApiBody({ schema: { type: 'object', properties: { email: { type: 'string', example: 'admin@school.edu.vn' }, clientUrl: { type: 'string' } }, required: ['email'] } })
   @ApiResponse({ status: 200, description: 'Gửi email thành công' })
-  async forgotPassword(@Body('email') email: string) {
+  async forgotPassword(
+    @Body('email') email: string,
+    @Body('clientUrl') clientUrl?: string
+  ) {
     if (!email) throw new UnauthorizedException('Email required');
-    return await this.authService.forgotPassword(email);
+    return await this.authService.forgotPassword(email, clientUrl);
   }
 
   @Post('reset-password')
