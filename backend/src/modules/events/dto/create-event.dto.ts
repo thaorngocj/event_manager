@@ -1,4 +1,4 @@
-import {
+import {
   IsNotEmpty,
   IsDateString,
   IsOptional,
@@ -9,6 +9,8 @@ import {
   IsEmail,
   MaxLength,
   Min,
+  IsInt,
+  IsBoolean,
 } from 'class-validator';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -100,12 +102,10 @@ export class CreateEventDto {
   @IsEnum(SCALE)
   scale?: Scale;
 
-  @ApiPropertyOptional({
-    example: 'CNTT',
-  })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  faculty?: string;
+  @IsInt()
+  facultyId?: number;
 
   @ApiPropertyOptional({
     example: 'Đoàn trường',
@@ -150,11 +150,35 @@ export class CreateEventDto {
   @IsString()
   bannerUrl?: string;
 
-  @ApiPropertyOptional({
-    example: ['nestjs', 'backend'],
-  })
+  @ApiPropertyOptional({ type: [String], description: 'Các thẻ phân loại/SEO' })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  trainingPoints?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  targetAudiences?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isMandatory?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  semester?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  academicYear?: string;
 }

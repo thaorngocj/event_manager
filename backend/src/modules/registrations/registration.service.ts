@@ -26,79 +26,84 @@ export class RegistrationService {
   ) {}
 
   async register(userId: number, eventId: number) {
-    const event = await this.eventRepo.findOne({ where: { id: eventId } });
+    // Sử dụng Transaction và Pessimistic Locking để chống Race Condition (Overbooking)
+    return await this.eventRepo.manager.transaction(async (manager) => {
+      // 1. Khoá dòng dữ liệu của sự kiện này (Row-level lock)
+      // Bất kỳ ai click đăng ký cùng lúc sẽ phải xếp hàng chờ request này chạy xong
+      const event = await manager.findOne(Event, {
+        where: { id: eventId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    if (!event) {
-      throw new NotFoundException('Event không tồn tại');
-    }
+      if (!event) throw new NotFoundException('Event không tồn tại');
+      if (event.isCancelled) throw new BadRequestException('Sự kiện đã bị huỷ');
 
-    if (event.isCancelled) {
-      throw new BadRequestException('Sự kiện đã bị huỷ');
-    }
+      const deadline = event.registrationDeadline
+        ? new Date(event.registrationDeadline)
+        : new Date(event.startDate);
+      if (new Date() > deadline)
+        throw new BadRequestException('Đã quá hạn đăng ký');
 
-    const deadline = event.registrationDeadline
-      ? new Date(event.registrationDeadline)
-      : new Date(event.startDate);
+      if (
+        event.status === EVENT_STATUS.CLOSED ||
+        event.status === EVENT_STATUS.CANCELLED
+      ) {
+        throw new BadRequestException('Sự kiện đã đóng');
+      }
+      if (!event.isRegistrationOpen)
+        throw new BadRequestException('Đăng ký đã bị tắt');
 
-    if (new Date() > deadline) {
-      throw new BadRequestException('Đã quá hạn đăng ký');
-    }
+      // 2. Kiểm tra slot ngay trong lúc đang giữ Lock
+      if (
+        event.isFull ||
+        (event.maxParticipants &&
+          event.registeredCount >= event.maxParticipants)
+      ) {
+        throw new BadRequestException('Sự kiện đã đủ người');
+      }
 
-    if (
-      event.status === EVENT_STATUS.CLOSED ||
-      event.status === EVENT_STATUS.CANCELLED
-    ) {
-      throw new BadRequestException('Sự kiện đã đóng');
-    }
+      const existing = await manager.findOne(Registration, {
+        where: { userId, eventId },
+      });
+      if (existing) throw new ConflictException('Đã đăng ký rồi');
 
-    if (!event.isRegistrationOpen) {
-      throw new BadRequestException('Đăng ký đã bị tắt');
-    }
+      // 3. Đăng ký và tăng số lượng
+      const registration = manager.create(Registration, {
+        userId,
+        eventId,
+        status: 'REGISTERED',
+      });
+      const savedRegistration = await manager.save(registration);
 
-    if (
-      event.isFull ||
-      (event.maxParticipants && event.registeredCount >= event.maxParticipants)
-    ) {
-      throw new BadRequestException('Sự kiện đã đủ người');
-    }
+      event.registeredCount += 1;
+      await manager.save(event);
 
-    const existing = await this.repo.findOne({ where: { userId, eventId } });
+      // Tạo QR code với ID THẬT từ database
+      const qrData = JSON.stringify({
+        userId,
+        eventId,
+        registrationId: savedRegistration.id,
+      });
 
-    if (existing) {
-      throw new ConflictException('Đã đăng ký rồi');
-    }
+      const qrCode = await toDataURL(qrData);
 
-    const registration = this.repo.create({
-      userId,
-      eventId,
-      status: 'REGISTERED',
+      savedRegistration.qrCode = qrCode;
+      const finalRegistration = await manager.save(savedRegistration);
+
+      // Gửi email thông báo (chạy ngầm, không cần đợi trong transaction)
+      this.userRepo.findOne({ where: { id: userId } }).then((user) => {
+        if (user && user.email) {
+          this.mailService
+            .sendEventRegistrationNotification(user.email, event.title, qrCode)
+            .catch(console.error);
+        }
+      });
+
+      return {
+        message: 'Đăng ký thành công',
+        registration: finalRegistration,
+      };
     });
-
-    const savedRegistration = await this.repo.save(registration);
-    await this.eventRepo.increment({ id: eventId }, 'registeredCount', 1);
-
-    // Tạo QR code với ID THẬT từ database
-    const qrData = JSON.stringify({
-      userId,
-      eventId,
-      registrationId: savedRegistration.id, // Dùng ID thật
-    });
-
-    const qrCode = await toDataURL(qrData);
-
-    // Cập nhật QR code vào registration
-    savedRegistration.qrCode = qrCode;
-    const finalRegistration = await this.repo.save(savedRegistration);
-
-    // Gửi email thông báo (bất đồng bộ)
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (user && user.email) {
-      this.mailService
-        .sendEventRegistrationNotification(user.email, event.title, qrCode)
-        .catch(console.error);
-    }
-
-    return finalRegistration;
   }
 
   async checkIn(
@@ -130,8 +135,22 @@ export class RegistrationService {
     });
 
     if (!registration) throw new NotFoundException('Đăng ký không hợp lệ');
-    if (registration.event.status !== EVENT_STATUS.ONGOING) throw new BadRequestException('Sự kiện chưa diễn ra hoặc đã kết thúc');
-    if (registration.status === 'CHECKED_IN') throw new BadRequestException('Đã check-in rồi');
+    if (registration.event.status === EVENT_STATUS.CANCELLED) {
+      throw new BadRequestException('Sự kiện đã bị hủy');
+    }
+    if (registration.event.status === EVENT_STATUS.DRAFT) {
+      throw new BadRequestException('Sự kiện đang là bản nháp');
+    }
+
+    const now = new Date();
+    const checkinStartTime = new Date(registration.event.startDate);
+    checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 15);
+    
+    if (now < checkinStartTime) {
+      throw new BadRequestException('Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu');
+    }
+    if (registration.status === 'CHECKED_IN')
+      throw new BadRequestException('Đã check-in rồi');
 
     registration.status = 'CHECKED_IN';
     registration.checkedInAt = new Date();
@@ -201,8 +220,22 @@ export class RegistrationService {
       relations: ['event'],
     });
     if (!registration) throw new NotFoundException('Sinh viên chưa đăng ký');
-    if (registration.event.status !== EVENT_STATUS.ONGOING) throw new BadRequestException('Sự kiện chưa diễn ra hoặc đã kết thúc');
-    if (registration.status === 'CHECKED_IN') throw new BadRequestException('Đã check-in rồi');
+    if (registration.event.status === EVENT_STATUS.CANCELLED) {
+      throw new BadRequestException('Sự kiện đã bị hủy');
+    }
+    if (registration.event.status === EVENT_STATUS.DRAFT) {
+      throw new BadRequestException('Sự kiện đang là bản nháp');
+    }
+
+    const now = new Date();
+    const checkinStartTime = new Date(registration.event.startDate);
+    checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 15);
+    
+    if (now < checkinStartTime) {
+      throw new BadRequestException('Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu');
+    }
+    if (registration.status === 'CHECKED_IN')
+      throw new BadRequestException('Đã check-in rồi');
 
     registration.status = 'CHECKED_IN';
     registration.checkedInAt = new Date();

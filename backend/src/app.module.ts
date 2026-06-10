@@ -14,6 +14,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { FacultyModule } from './modules/faculties/faculty.module';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { APP_GUARD } from '@nestjs/core';
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV === 'test',
+      synchronize: process.env.NODE_ENV !== 'production',
       extra: {
         options: '-c TimeZone=Asia/Ho_Chi_Minh',
       },
@@ -49,6 +50,7 @@ import { APP_GUARD } from '@nestjs/core';
     UploadModule,
     MailModule,
     ActivityLogsModule,
+    FacultyModule,
   ],
   controllers: [AppController],
   providers: [

@@ -41,6 +41,36 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(['STUDENT', 'EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN'])
   role?: User['role'];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  facultyId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  major?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cohort?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  classId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  trainingPoints?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  unionRole?: string;
 }
 
 // Update role (admin only)
@@ -74,6 +104,36 @@ export class UpdateUserDto {
   @IsString()
   @MinLength(6)
   password?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  facultyId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  major?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cohort?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  classId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  trainingPoints?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  unionRole?: string;
 }
 
 // Query / pagination (admin only)

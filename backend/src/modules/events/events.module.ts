@@ -7,10 +7,11 @@ import { Event } from './event.entity';
 import { ImportHistory } from './history.event.entity';
 import { Registration } from '../registrations/registration.entity';
 import { User } from '../users/user.entity';
+import { Faculty } from '../faculties/faculty.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Event, ImportHistory, Registration, User]),
+    TypeOrmModule.forFeature([Event, ImportHistory, Registration, User, Faculty]),
     ScheduleModule.forRoot(),
   ],
   providers: [EventsService],

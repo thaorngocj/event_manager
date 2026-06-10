@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import {
   EVENT_STATUS,
@@ -19,6 +21,7 @@ import type {
   Scale,
   EventStatus,
 } from '../../constants/event.constants';
+import { Faculty } from '../faculties/faculty.entity';
 @Entity('events')
 @Index(['startDate', 'endDate']) // index cho calendar query
 @Index(['eventCategory']) // index cho filter
@@ -77,8 +80,12 @@ export class Event {
   scale!: Scale;
 
   // Đơn vị tổ chức
-  @Column({ length: 255, nullable: true })
-  faculty?: string; // Khoa tổ chức
+  @Column({ nullable: true })
+  facultyId?: number;
+
+  @ManyToOne(() => Faculty, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'facultyId' })
+  faculty?: Faculty; // Khoa tổ chức
 
   @Column({ length: 255, nullable: true })
   organizer?: string; // Tên đơn vị/CLB/Đoàn-Hội
@@ -108,6 +115,22 @@ export class Event {
   // Tags & SEO
   @Column({ type: 'simple-array', nullable: true })
   tags?: string[]; // ['BMC', 'khởi nghiệp', 'sinh viên']
+
+  // Thông tin mở rộng cho trường đại học
+  @Column({ type: 'int', default: 0 })
+  trainingPoints!: number;
+
+  @Column({ type: 'simple-array', nullable: true })
+  targetAudiences?: string[];
+
+  @Column({ default: false })
+  isMandatory!: boolean;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  semester?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  academicYear?: string;
 
   // Audit
   @CreateDateColumn({ type: 'timestamptz' })

@@ -2,11 +2,15 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import * as XLSX from 'xlsx';
+import type { Response } from 'express';
 import { User } from './user.entity';
+import { Faculty } from '../faculties/faculty.entity';
 import {
   CreateUserDto,
   QueryUsersDto,
@@ -27,6 +31,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly repo: Repository<User>,
+    @InjectRepository(Faculty)
+    private readonly facultyRepo: Repository<Faculty>,
   ) {}
 
   // Helpers
@@ -198,5 +204,137 @@ export class UsersService {
   async validatePassword(user: User, password: string): Promise<boolean> {
     if (!user.password) return false;
     return bcrypt.compare(password, user.password);
+  }
+
+  // Import / Export
+  getImportTemplate(res: Response) {
+    const wsData = [
+      ['Username', 'Email', 'Password', 'MSSV', 'Role', 'Mã Khoa', 'Ngành', 'Khóa', 'Lớp', 'Chức vụ', 'Điểm rèn luyện'],
+      ['nguyenvana', 'nguyenvana@gmail.com', '123456', 'SV001', 'STUDENT', 'IT', 'Kỹ thuật phần mềm', 'K28', 'SE1605', 'Bí thư', 0],
+      ['tranvanb', 'tranvanb@gmail.com', '123456', 'SV002', 'STUDENT', 'PRC', 'Truyền thông', 'K28', 'PR1601', 'Lớp trưởng', 0],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template_Users');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="Template_Import_Users.xlsx"',
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    return res.send(buffer);
+  }
+
+  async importUsers(fileBuffer: Buffer) {
+    let data: any[] = [];
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      data = XLSX.utils.sheet_to_json(sheet);
+    } catch {
+      throw new BadRequestException('File Excel không đúng định dạng');
+    }
+
+    if (data.length === 0) {
+      throw new BadRequestException('File không có dữ liệu');
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const username = String(row.Username || row.username || '').trim();
+      const email = String(row.Email || row.email || '').trim();
+      let mssv = row.MSSV || row.mssv;
+      if (mssv !== undefined && mssv !== null) mssv = String(mssv).trim();
+      
+      let password = String(row.Password || row.password || '').trim();
+      
+      let role = String(row.Role || row.role || 'STUDENT').trim().toUpperCase();
+      if (!['STUDENT', 'EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+        role = 'STUDENT';
+      }
+
+      const facultyCode = String(row['Mã Khoa'] || '').trim();
+      const major = String(row['Ngành'] || '').trim();
+      const cohort = String(row['Khóa'] || '').trim();
+      const classId = String(row['Lớp'] || '').trim();
+      const unionRole = String(row['Chức vụ'] || '').trim();
+      const trainingPoints = parseInt(row['Điểm rèn luyện']) || 0;
+
+      if (!email || !username) {
+        failedCount++;
+        errors.push(`Dòng ${i + 2}: Thiếu email hoặc username`);
+        continue;
+      }
+
+      // Check duplicates
+      const existing = await this.repo.findOne({
+        where: [{ email }, { username }, ...(mssv ? [{ mssv }] : [])],
+      });
+
+      if (existing) {
+        failedCount++;
+        let field = 'Thông tin';
+        if (existing.email === email) field = 'Email';
+        else if (existing.username === username) field = 'Username';
+        else if (existing.mssv === mssv) field = 'MSSV';
+        errors.push(`Dòng ${i + 2}: ${field} đã tồn tại`);
+        continue;
+      }
+
+      // Password logic: Default to "VA" + mssv if empty
+      if (!password) {
+        if (mssv) {
+          password = `VA${mssv}`;
+        } else {
+          failedCount++;
+          errors.push(`Dòng ${i + 2}: Bỏ trống Password nhưng lại không có MSSV để tạo mặc định`);
+          continue;
+        }
+      }
+
+      let facultyId: number | undefined = undefined;
+      if (facultyCode) {
+        const faculty = await this.facultyRepo.findOne({ where: { code: facultyCode } });
+        if (faculty) {
+          facultyId = faculty.id;
+        } else {
+          // Ghi nhận lỗi hoặc bỏ qua, ở đây tạm thời gán null/undefined nếu không tìm thấy Khoa
+          errors.push(`Dòng ${i + 2}: Mã Khoa '${facultyCode}' không tồn tại. User vẫn được tạo nhưng không có Khoa.`);
+        }
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+      const user = this.repo.create({
+        username,
+        email,
+        password: hashed,
+        mssv: mssv || undefined,
+        role: role as any,
+        facultyId,
+        major: major || undefined,
+        cohort: cohort || undefined,
+        classId: classId || undefined,
+        unionRole: unionRole || undefined,
+        trainingPoints,
+      });
+
+      const savedUser = await this.repo.save(user);
+      successCount++;
+    }
+
+    return {
+      message: `Import hoàn tất: ${successCount} thành công, ${failedCount} thất bại`,
+      successCount,
+      failedCount,
+      errors: errors.slice(0, 50), // Trả về tối đa 50 lỗi đầu tiên tránh quá tải payload
+    };
   }
 }

@@ -11,6 +11,7 @@ import { Event } from './event.entity';
 import { ImportHistory } from './history.event.entity';
 import { Registration } from '../registrations/registration.entity';
 import { User } from '../users/user.entity';
+import { Faculty } from '../faculties/faculty.entity';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { CalendarQueryDto } from './dto/calendar-query.dto';
 import * as XLSX from 'xlsx';
@@ -46,6 +47,8 @@ export class EventsService {
     private registrationRepo: Repository<Registration>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(Faculty)
+    private facultyRepo: Repository<Faculty>,
     private readonly activityLogsService: ActivityLogsService,
   ) {}
 
@@ -258,6 +261,11 @@ export class EventsService {
 
   async remove(id: number, userId?: number) {
     const event = await this.findOne(id);
+    
+    // Delete related records to prevent foreign key constraint violations
+    await this.registrationRepo.delete({ eventId: id });
+    await this.importHistoryRepo.delete({ eventId: id });
+    
     await this.repo.delete(id);
     if (userId) {
       this.activityLogsService.logAction(
@@ -350,6 +358,12 @@ export class EventsService {
         'Sức chứa': 200,
         'Danh mục': 'ACADEMIC', 
         'Quy mô': 'SCHOOL',
+        'Mã Khoa': 'IT',
+        'Điểm rèn luyện': 5,
+        'Bắt buộc': 'Không',
+        'Đối tượng': 'K28,K29',
+        'Học kỳ': 'HK2',
+        'Năm học': '2025-2026'
       }
     ];
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -419,6 +433,29 @@ export class EventsService {
 
         const scale = row['Quy mô'] || 'SCHOOL';
 
+        const facultyCode = String(row['Mã Khoa'] || '').trim();
+        let facultyId: number | undefined = undefined;
+        if (facultyCode) {
+          const faculty = await this.facultyRepo.findOne({ where: { code: facultyCode } });
+          if (faculty) {
+            facultyId = faculty.id;
+          } else {
+            errors.push(`Dòng ${i + 2}: Mã Khoa '${facultyCode}' không tồn tại. Sự kiện được tạo nhưng không gắn Khoa.`);
+          }
+        }
+
+        const trainingPoints = parseInt(row['Điểm rèn luyện']) || 0;
+        const isMandatoryStr = String(row['Bắt buộc'] || '').trim().toLowerCase();
+        const isMandatory = isMandatoryStr === 'có' || isMandatoryStr === 'yes' || isMandatoryStr === 'true' || isMandatoryStr === '1';
+        
+        let targetAudiences: string[] | undefined = undefined;
+        if (row['Đối tượng']) {
+          targetAudiences = String(row['Đối tượng']).split(',').map(s => s.trim()).filter(s => s);
+        }
+
+        const semester = String(row['Học kỳ'] || '').trim() || undefined;
+        const academicYear = String(row['Năm học'] || '').trim() || undefined;
+
         const event = this.repo.create({
           title,
           description: row['Mô tả'] || '',
@@ -431,6 +468,12 @@ export class EventsService {
           scale: scale as any,
           status: EVENT_STATUS.UPCOMING,
           createdBy: importedBy,
+          facultyId,
+          trainingPoints,
+          isMandatory,
+          targetAudiences,
+          semester,
+          academicYear,
         });
 
         const savedEvent = await this.repo.save(event);
@@ -476,7 +519,10 @@ export class EventsService {
         'Họ tên': 'Nguyễn Văn A',
         'Email': 'student@school.edu.vn',
         'MSSV': '217IT01010',
-        'Khoa/Viện': 'Khoa Công nghệ thông tin',
+        'Khoa/Viện': 'IT',
+        'Ngành': 'Kỹ thuật phần mềm',
+        'Khóa': 'K28',
+        'Lớp': 'SE1605',
         'Thời gian đăng ký': '2026-05-20 08:00:00',
         'Thời gian check-in': '2026-05-20 09:00:00',
         'Trạng thái': 'Đã tham gia' // Hoặc 'Đã đăng ký'
@@ -625,7 +671,7 @@ export class EventsService {
 
     const registrations = await this.registrationRepo.find({
       where: { eventId },
-      relations: ['user'],
+      relations: ['user', 'user.faculty'],
     });
 
     if (exportedBy) {
@@ -643,6 +689,11 @@ export class EventsService {
       'Họ tên': reg.user?.username || 'N/A',
       Email: reg.user?.email || 'N/A',
       'MSSV': reg.user?.mssv || 'N/A',
+      'Tên Khoa': reg.user?.faculty?.name || 'N/A',
+      'Ngành': reg.user?.major || 'N/A',
+      'Khóa': reg.user?.cohort || 'N/A',
+      'Lớp': reg.user?.classId || 'N/A',
+      'Chức vụ': reg.user?.unionRole || 'N/A',
       'Trạng thái': reg.status === 'CHECKED_IN' ? 'Đã tham gia' : 'Đã đăng ký',
       'Thời gian đăng ký': reg.registeredAt,
       'Thời gian check-in': reg.checkedInAt || 'Chưa check-in',

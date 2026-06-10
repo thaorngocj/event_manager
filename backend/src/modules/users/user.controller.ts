@@ -12,13 +12,21 @@ import {
   Query,
   Request,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Res,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { Roles } from '../../decorators/roles.decorator';
@@ -53,6 +61,47 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Email hoặc username đã tồn tại' })
   create(@Body() dto: CreateUserDto) {
     return this.usersService.createUser(dto);
+  }
+
+  // SUPER_ADMIN: Import từ Excel
+  @Get('import/template')
+  @Roles('SUPER_ADMIN')
+  @ApiOperation({ summary: '[SUPER_ADMIN] Tải file Excel mẫu để import' })
+  getImportTemplate(@Res() res: Response) {
+    return this.usersService.getImportTemplate(res);
+  }
+
+  @Post('import')
+  @Roles('SUPER_ADMIN')
+  @ApiOperation({ summary: '[SUPER_ADMIN] Import user từ file Excel' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'File Excel (.xlsx hoặc .xls)',
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(xlsx|xls)$/)) {
+          return cb(new BadRequestException('Chỉ cho phép file Excel'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async importUsers(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Vui lòng chọn file');
+    return this.usersService.importUsers(file.buffer);
   }
 
   // SUPER_ADMIN / ADMIN: danh sách + tìm kiếm
