@@ -233,6 +233,24 @@ export class EventsService {
         'registrationDeadline phải trước startDate',
       );
 
+    const now = new Date();
+    if (data.status && data.status !== existing.status) {
+      if (existing.status === EVENT_STATUS.CANCELLED && data.status !== EVENT_STATUS.DRAFT) {
+        throw new BadRequestException('Không thể thay đổi trạng thái của sự kiện đã bị hủy');
+      }
+
+      if (
+        (data.status === EVENT_STATUS.UPCOMING || data.status === EVENT_STATUS.OPEN) &&
+        start <= now
+      ) {
+        throw new BadRequestException('Không thể chuyển trạng thái "Sắp diễn ra/Mở đăng ký" vì thời gian bắt đầu đã qua');
+      }
+
+      if (data.status === EVENT_STATUS.ONGOING && end <= now) {
+        throw new BadRequestException('Không thể chuyển trạng thái "Đang diễn ra" vì thời gian kết thúc đã qua');
+      }
+    }
+
     let slug = existing.slug;
     if (data.title && data.title !== existing.title) {
       slug = await this.generateUniqueSlug(data.title, id);
