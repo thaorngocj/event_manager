@@ -246,6 +246,10 @@ export class EventsService {
         throw new BadRequestException('Không thể chuyển trạng thái "Sắp diễn ra/Mở đăng ký" vì thời gian bắt đầu đã qua');
       }
 
+      if (data.status === EVENT_STATUS.OPEN && deadline && deadline <= now) {
+        throw new BadRequestException('Không thể chuyển trạng thái "Mở đăng ký" vì hạn chót đăng ký đã qua');
+      }
+
       if (data.status === EVENT_STATUS.ONGOING && end <= now) {
         throw new BadRequestException('Không thể chuyển trạng thái "Đang diễn ra" vì thời gian kết thúc đã qua');
       }
