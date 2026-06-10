@@ -101,6 +101,7 @@ export class UsersService {
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
+      relations: ['faculty'],
     });
 
     return {
