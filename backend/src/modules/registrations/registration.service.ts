@@ -91,7 +91,7 @@ export class RegistrationService {
       const finalRegistration = await manager.save(savedRegistration);
 
       // Gửi email thông báo (chạy ngầm, không cần đợi trong transaction)
-      this.userRepo.findOne({ where: { id: userId } }).then((user) => {
+      void this.userRepo.findOne({ where: { id: userId } }).then((user) => {
         if (user && user.email) {
           this.mailService
             .sendEventRegistrationNotification(user.email, event.title, qrCode)
@@ -141,13 +141,18 @@ export class RegistrationService {
     if (registration.event.status === EVENT_STATUS.DRAFT) {
       throw new BadRequestException('Sự kiện đang là bản nháp');
     }
+    if (registration.event.status === EVENT_STATUS.CLOSED) {
+      throw new BadRequestException('Sự kiện đã kết thúc, không thể điểm danh');
+    }
 
     const now = new Date();
     const checkinStartTime = new Date(registration.event.startDate);
     checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 15);
-    
+
     if (now < checkinStartTime) {
-      throw new BadRequestException('Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu');
+      throw new BadRequestException(
+        'Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu',
+      );
     }
     if (registration.status === 'CHECKED_IN')
       throw new BadRequestException('Đã check-in rồi');
@@ -230,9 +235,11 @@ export class RegistrationService {
     const now = new Date();
     const checkinStartTime = new Date(registration.event.startDate);
     checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 15);
-    
+
     if (now < checkinStartTime) {
-      throw new BadRequestException('Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu');
+      throw new BadRequestException(
+        'Chỉ được điểm danh sớm nhất 15 phút trước khi sự kiện bắt đầu',
+      );
     }
     if (registration.status === 'CHECKED_IN')
       throw new BadRequestException('Đã check-in rồi');
