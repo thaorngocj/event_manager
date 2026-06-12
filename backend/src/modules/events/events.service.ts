@@ -19,6 +19,7 @@ import {
   EVENT_CATEGORY_COLORS,
   EVENT_STATUS,
   EVENT_CATEGORY,
+  EventStatus,
 } from '../../constants/event.constants';
 import { UpdateEventDto } from './dto/update-event.dto'; // thêm dòng này
 
@@ -234,7 +235,7 @@ export class EventsService {
         throw new BadRequestException('Không thể thay đổi ngày giờ vì sự kiện đã có người đăng ký');
       }
 
-      const restrictedStatuses = [EVENT_STATUS.OPEN, EVENT_STATUS.ONGOING, EVENT_STATUS.CLOSED, EVENT_STATUS.CANCELLED];
+      const restrictedStatuses: EventStatus[] = [EVENT_STATUS.OPEN, EVENT_STATUS.ONGOING, EVENT_STATUS.CLOSED, EVENT_STATUS.CANCELLED];
       if (restrictedStatuses.includes(existing.status)) {
         throw new BadRequestException('Chỉ được phép thay đổi ngày giờ khi sự kiện đang ở Bản nháp hoặc Sắp diễn ra');
       }
