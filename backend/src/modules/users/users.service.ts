@@ -210,15 +210,54 @@ export class UsersService {
   // Import / Export
   getImportTemplate(res: Response) {
     const wsData = [
-      ['Username', 'Email', 'Password', 'MSSV', 'Role', 'Mã Khoa', 'Ngành', 'Khóa', 'Lớp', 'Chức vụ', 'Điểm rèn luyện'],
-      ['nguyenvana', 'nguyenvana@gmail.com', '123456', 'SV001', 'STUDENT', 'IT', 'Kỹ thuật phần mềm', 'K28', 'SE1605', 'Bí thư', 0],
-      ['tranvanb', 'tranvanb@gmail.com', '123456', 'SV002', 'STUDENT', 'PRC', 'Truyền thông', 'K28', 'PR1601', 'Lớp trưởng', 0],
+      [
+        'Username',
+        'Email',
+        'Password',
+        'MSSV',
+        'Role',
+        'Mã Khoa',
+        'Ngành',
+        'Khóa',
+        'Lớp',
+        'Chức vụ',
+        'Điểm rèn luyện',
+      ],
+      [
+        'nguyenvana',
+        'nguyenvana@gmail.com',
+        '123456',
+        'SV001',
+        'STUDENT',
+        'IT',
+        'Kỹ thuật phần mềm',
+        'K28',
+        'SE1605',
+        'Bí thư',
+        0,
+      ],
+      [
+        'tranvanb',
+        'tranvanb@gmail.com',
+        '123456',
+        'SV002',
+        'STUDENT',
+        'PRC',
+        'Truyền thông',
+        'K28',
+        'PR1601',
+        'Lớp trưởng',
+        0,
+      ],
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template_Users');
 
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = XLSX.write(wb, {
+      type: 'buffer',
+      bookType: 'xlsx',
+    }) as Buffer;
     res.setHeader(
       'Content-Disposition',
       'attachment; filename="Template_Import_Users.xlsx"',
@@ -231,11 +270,30 @@ export class UsersService {
   }
 
   async importUsers(fileBuffer: Buffer) {
-    let data: any[] = [];
+    interface UserExcelRow {
+      Username?: string | number;
+      username?: string | number;
+      Email?: string;
+      email?: string;
+      Password?: string | number;
+      password?: string | number;
+      MSSV?: string | number;
+      mssv?: string | number;
+      Role?: string;
+      role?: string;
+      'Mã Khoa'?: string;
+      Ngành?: string;
+      Khóa?: string | number;
+      Lớp?: string;
+      'Chức vụ'?: string;
+      'Điểm rèn luyện'?: string | number;
+    }
+
+    let data: UserExcelRow[] = [];
     try {
       const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      data = XLSX.utils.sheet_to_json(sheet);
+      data = XLSX.utils.sheet_to_json<UserExcelRow>(sheet);
     } catch {
       throw new BadRequestException('File Excel không đúng định dạng');
     }
@@ -254,11 +312,15 @@ export class UsersService {
       const email = String(row.Email || row.email || '').trim();
       let mssv = row.MSSV || row.mssv;
       if (mssv !== undefined && mssv !== null) mssv = String(mssv).trim();
-      
+
       let password = String(row.Password || row.password || '').trim();
-      
-      let role = String(row.Role || row.role || 'STUDENT').trim().toUpperCase();
-      if (!['STUDENT', 'EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+
+      let role = String(row.Role || row.role || 'STUDENT')
+        .trim()
+        .toUpperCase();
+      if (
+        !['STUDENT', 'EVENT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)
+      ) {
         role = 'STUDENT';
       }
 
@@ -267,7 +329,8 @@ export class UsersService {
       const cohort = String(row['Khóa'] || '').trim();
       const classId = String(row['Lớp'] || '').trim();
       const unionRole = String(row['Chức vụ'] || '').trim();
-      const trainingPoints = parseInt(row['Điểm rèn luyện']) || 0;
+      const trainingPoints =
+        parseInt(String(row['Điểm rèn luyện'] || '0')) || 0;
 
       if (!email || !username) {
         failedCount++;
@@ -296,19 +359,25 @@ export class UsersService {
           password = `VA${mssv}`;
         } else {
           failedCount++;
-          errors.push(`Dòng ${i + 2}: Bỏ trống Password nhưng lại không có MSSV để tạo mặc định`);
+          errors.push(
+            `Dòng ${i + 2}: Bỏ trống Password nhưng lại không có MSSV để tạo mặc định`,
+          );
           continue;
         }
       }
 
       let facultyId: number | undefined = undefined;
       if (facultyCode) {
-        const faculty = await this.facultyRepo.findOne({ where: { code: facultyCode } });
+        const faculty = await this.facultyRepo.findOne({
+          where: { code: facultyCode },
+        });
         if (faculty) {
           facultyId = faculty.id;
         } else {
           // Ghi nhận lỗi hoặc bỏ qua, ở đây tạm thời gán null/undefined nếu không tìm thấy Khoa
-          errors.push(`Dòng ${i + 2}: Mã Khoa '${facultyCode}' không tồn tại. User vẫn được tạo nhưng không có Khoa.`);
+          errors.push(
+            `Dòng ${i + 2}: Mã Khoa '${facultyCode}' không tồn tại. User vẫn được tạo nhưng không có Khoa.`,
+          );
         }
       }
 
@@ -318,7 +387,7 @@ export class UsersService {
         email,
         password: hashed,
         mssv: mssv || undefined,
-        role: role as any,
+        role: role as 'STUDENT' | 'EVENT_MANAGER' | 'ADMIN' | 'SUPER_ADMIN',
         facultyId,
         major: major || undefined,
         cohort: cohort || undefined,
@@ -327,7 +396,7 @@ export class UsersService {
         trainingPoints,
       });
 
-      const savedUser = await this.repo.save(user);
+      await this.repo.save(user);
       successCount++;
     }
 
