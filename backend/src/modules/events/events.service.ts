@@ -225,6 +225,21 @@ export class EventsService {
       ? new Date(data.registrationDeadline)
       : existing.registrationDeadline;
 
+    const isDateChanged = 
+      (data.startDate && start.getTime() !== existing.startDate.getTime()) ||
+      (data.endDate && end.getTime() !== existing.endDate.getTime());
+
+    if (isDateChanged) {
+      if (existing.registeredCount > 0) {
+        throw new BadRequestException('Không thể thay đổi ngày giờ vì sự kiện đã có người đăng ký');
+      }
+
+      const restrictedStatuses = [EVENT_STATUS.OPEN, EVENT_STATUS.ONGOING, EVENT_STATUS.CLOSED, EVENT_STATUS.CANCELLED];
+      if (restrictedStatuses.includes(existing.status)) {
+        throw new BadRequestException('Chỉ được phép thay đổi ngày giờ khi sự kiện đang ở Bản nháp hoặc Sắp diễn ra');
+      }
+    }
+
     if (start >= end)
       throw new BadRequestException('startDate phải trước endDate');
 
