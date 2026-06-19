@@ -144,6 +144,9 @@ export class RegistrationService {
     if (registration.event.status === EVENT_STATUS.CLOSED) {
       throw new BadRequestException('Sự kiện đã kết thúc, không thể điểm danh');
     }
+    if (registration.status === 'CANCELLED') {
+      throw new BadRequestException('Đăng ký này đã bị hủy');
+    }
 
     const now = new Date();
     const checkinStartTime = new Date(registration.event.startDate);
@@ -185,35 +188,43 @@ export class RegistrationService {
   }
 
   async cancelRegistration(registrationId: number, userId: number) {
-    const registration = await this.repo.findOne({
-      where: { id: registrationId, userId },
-      relations: ['event'],
+    return await this.eventRepo.manager.transaction(async (manager) => {
+      const registration = await manager.findOne(Registration, {
+        where: { id: registrationId, userId },
+        relations: ['event'],
+      });
+
+      if (!registration) {
+        throw new NotFoundException('Không tìm thấy đăng ký');
+      }
+
+      const eventStartDate = new Date(registration.event.startDate);
+      const now = new Date();
+
+      if (now >= eventStartDate) {
+        throw new BadRequestException('Không thể hủy sau khi sự kiện đã bắt đầu');
+      }
+
+      if (registration.status === 'CHECKED_IN') {
+        throw new BadRequestException('Không thể hủy vì đã check-in');
+      }
+
+      if (registration.status === 'CANCELLED') {
+        throw new BadRequestException('Đăng ký này đã bị hủy rồi');
+      }
+
+      registration.status = 'CANCELLED';
+
+      // Giảm số lượng người đăng ký
+      await manager.decrement(
+        Event,
+        { id: registration.eventId },
+        'registeredCount',
+        1,
+      );
+
+      return manager.save(registration);
     });
-
-    if (!registration) {
-      throw new NotFoundException('Không tìm thấy đăng ký');
-    }
-
-    const eventStartDate = new Date(registration.event.startDate);
-    const now = new Date();
-
-    if (now >= eventStartDate) {
-      throw new BadRequestException('Không thể hủy sau khi sự kiện đã bắt đầu');
-    }
-
-    if (registration.status === 'CHECKED_IN') {
-      throw new BadRequestException('Không thể hủy vì đã check-in');
-    }
-
-    registration.status = 'CANCELLED';
-
-    await this.eventRepo.decrement(
-      { id: registration.eventId },
-      'registeredCount',
-      1,
-    );
-
-    return this.repo.save(registration);
   }
 
   async manualCheckIn(eventId: number, email: string, checkedBy: number) {
@@ -230,6 +241,9 @@ export class RegistrationService {
     }
     if (registration.event.status === EVENT_STATUS.DRAFT) {
       throw new BadRequestException('Sự kiện đang là bản nháp');
+    }
+    if (registration.status === 'CANCELLED') {
+      throw new BadRequestException('Đăng ký này đã bị hủy');
     }
 
     const now = new Date();
