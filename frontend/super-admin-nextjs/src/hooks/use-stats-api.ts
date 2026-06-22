@@ -10,7 +10,7 @@ export function useOverviewStats() {
       try {
         const data = await statisticsService.getOverview()
         return {
-          totalUsers: data.totalStudents ?? data.totalUsers ?? 0,
+          totalUsers: data.totalUsers ?? data.totalStudents ?? 0,
           totalEvents: data.totalEvents ?? 0,
           totalCheckins: data.totalCheckins ?? 0,
           checkInRate: parseFloat(String(data.checkinRate ?? data.checkInRate ?? 0)),

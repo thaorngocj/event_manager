@@ -21,6 +21,7 @@ export class StatisticsService {
     const totalStudents = await this.userRepo.count({
       where: { role: 'STUDENT' },
     });
+    const totalUsers = await this.userRepo.count();
     const totalRegistrations = await this.registrationRepo.count();
     const totalCheckins = await this.registrationRepo.count({
       where: { status: 'CHECKED_IN' },
@@ -29,6 +30,7 @@ export class StatisticsService {
     return {
       totalEvents,
       totalStudents,
+      totalUsers,
       totalRegistrations,
       totalCheckins,
       checkinRate:
