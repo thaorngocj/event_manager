@@ -30,5 +30,30 @@ services:
       - /app/node_modules
     command: npm run start:dev
 
+  event-portal:
+    build: 
+      context: ./frontend/next-event-portal
+      args:
+        NEXT_PUBLIC_API_URL: http://10.0.10.29:3000/api/v1
+    container_name: next_event_portal
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    environment:
+      - AUTH_SECRET=super-secret-nextauth-key-change-in-production
+      - AUTH_URL=http://10.0.10.29:3001
+
+  super-admin:
+    build: 
+      context: ./frontend/super-admin-nextjs
+      args:
+        NEXT_PUBLIC_API_URL: http://10.0.10.29:3000/api/v1
+    container_name: super_admin_nextjs
+    ports:
+      - "3002:3000"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
