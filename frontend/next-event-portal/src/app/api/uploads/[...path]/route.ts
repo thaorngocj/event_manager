@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
+  const apiBase = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
   const baseUrl = apiBase.replace(/\/api\/v1\/?$/, '')
 
   // Lấy path từ URL trực tiếp thay vì dùng params (tránh vấn đề async params Next.js 15+)

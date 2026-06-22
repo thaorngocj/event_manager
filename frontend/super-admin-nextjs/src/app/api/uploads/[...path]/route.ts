@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
+  const apiBase = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
   const baseUrl = apiBase.replace(/\/api\/v1\/?$/, '')
-  const filePath = params.path.join('/')
+  const awaitedParams = await params
+  const filePath = awaitedParams.path.join('/')
   const targetUrl = `${baseUrl}/uploads/${filePath}`
 
   try {

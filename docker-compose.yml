@@ -58,6 +58,8 @@ services:
       - "3002:3000"
     depends_on:
       - backend
+    environment:
+      - BACKEND_URL=http://nest_backend:3000/api/v1
     extra_hosts:
       - "10.0.10.29:host-gateway"
 
