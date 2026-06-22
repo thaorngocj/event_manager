@@ -229,7 +229,9 @@ export default function Events() {
       : new Date().toISOString();
     const endDate = newEvent.endDate
       ? `${newEvent.endDate}T23:59:00.000Z`
-      : startDate;
+      : newEvent.date 
+        ? `${newEvent.date}T23:59:00.000Z`
+        : new Date(new Date().getTime() + 86400000).toISOString();
 
     const payload: Record<string, unknown> = {
       title: newEvent.title,

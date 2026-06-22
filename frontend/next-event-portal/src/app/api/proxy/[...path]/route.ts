@@ -20,11 +20,10 @@ async function proxyHandler(
   if (authorization) headers['authorization'] = authorization
 
   const method = request.method
-  let body: string | undefined
+  let body: ArrayBuffer | undefined
   if (!['GET', 'HEAD'].includes(method)) {
     try {
-      const text = await request.text()
-      if (text) body = text
+      body = await request.arrayBuffer()
     } catch {
       // no body
     }
