@@ -445,7 +445,7 @@ export default function Events() {
 
                   {/* 2. Tên sự kiện */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">TÊN SỰ KIỆN</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">TÊN SỰ KIỆN <span className="text-red-500">*</span></Label>
                     <Input placeholder="VD: HỘI THẢO AI 2026" className="h-12 bg-slate-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-red-500/20" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
                   </div>
 
@@ -458,7 +458,7 @@ export default function Events() {
                   {/* 4. Ngày bắt đầu / Ngày kết thúc */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">NGÀY BẮT ĐẦU</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">NGÀY BẮT ĐẦU <span className="text-red-500">*</span></Label>
                       <Input type="date" value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
                     </div>
                     <div className="space-y-2">
@@ -481,7 +481,7 @@ export default function Events() {
 
                   {/* 6. Địa điểm */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">ĐỊA ĐIỂM</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">ĐỊA ĐIỂM <span className="text-red-500">*</span></Label>
                     <Input value={newEvent.location} onChange={e => setNewEvent({ ...newEvent, location: e.target.value })} placeholder="VD: Hội trường A" className="h-12 bg-slate-50 border-none rounded-xl" />
                   </div>
 
