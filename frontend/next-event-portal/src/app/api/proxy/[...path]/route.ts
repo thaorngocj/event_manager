@@ -4,9 +4,10 @@ const BACKEND = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'h
 
 async function proxyHandler(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const path = params.path.join('/')
+  const awaitedParams = await params
+  const path = awaitedParams.path.join('/')
   const targetUrl = `${BACKEND}/${path}${request.nextUrl.search}`
 
   const headers: Record<string, string> = {
