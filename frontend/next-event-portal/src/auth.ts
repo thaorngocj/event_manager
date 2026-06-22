@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://nest_backend:3000/api/v1'
 
 // Demo accounts — work without a running backend
 const DEMO_USERS: Record<string, { id: string; name: string; role: string; schoolId: string }> = {

@@ -43,6 +43,9 @@ services:
     environment:
       - AUTH_SECRET=super-secret-nextauth-key-change-in-production
       - AUTH_URL=http://10.0.10.29:3001
+      - API_INTERNAL_URL=http://nest_backend:3000/api/v1
+    extra_hosts:
+      - "10.0.10.29:host-gateway"
 
   super-admin:
     build: 
@@ -54,6 +57,8 @@ services:
       - "3002:3000"
     depends_on:
       - backend
+    extra_hosts:
+      - "10.0.10.29:host-gateway"
 
 volumes:
   postgres_data:
