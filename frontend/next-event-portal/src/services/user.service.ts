@@ -37,4 +37,8 @@ export const userService = {
     const { data } = await apiClient.patch(`/users/${id}/deactivate`);
     return data;
   },
+  importBulk: async (users: { email: string; password: string; schoolId?: string; role?: string; name?: string }[]) => {
+    const { data } = await apiClient.post('/users/import', { users });
+    return data;
+  },
 };

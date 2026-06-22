@@ -31,6 +31,8 @@ import {
   useUpdateEventMutation,
   useDeleteEventMutation,
 } from "@/hooks/use-events-api"
+import { PaginationBar } from "@/components/ui/pagination-bar"
+import { useFacultiesQuery } from "@/hooks/use-faculties-api"
 import { uploadService } from "@/services/upload.service"
 import { getImageUrl } from "@/lib/utils"
 
@@ -48,34 +50,36 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL")
   const [eventDisplayMode, setEventDisplayMode] = useState<'HERO' | 'FEATURED' | 'HIGHLIGHT' | 'NORMAL'>("FEATURED")
   const [eventCategory, setEventCategory] = useState("ACADEMIC")
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("none")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [newEvent, setNewEvent] = useState({ title: "", description: "", location: "", date: "", endDate: "", time: "", capacity: "200" })
+  const [newEvent, setNewEvent] = useState({ title: "", description: "", location: "", date: "", endDate: "", time: "", capacity: "200", organizer: "", contactEmail: "", contactPhone: "", registrationDeadline: "", trainingPoints: "", semester: "", academicYear: "" })
+  const [isMandatory, setIsMandatory] = useState(false)
+  const [eventScale, setEventScale] = useState<string>("SCHOOL")
 
-  const [page, setPage] = useState(1)
-  const limit = 10
-  
-  // Use debounced search term if we want, but for now just use searchTerm
-  const { data: eventsData, isLoading } = useEventsQuery({ 
-    page, 
-    limit, 
-    search: searchTerm, 
-    status: statusFilter === "ALL" ? undefined : statusFilter 
-  })
-  
-  const events = eventsData?.data || []
-  const totalPages = eventsData?.totalPages || 1
+  const [eventsPage, setEventsPage] = useState(1)
+  const EVENTS_PAGE_SIZE = 10
 
+  const { data: eventsResult, isLoading } = useEventsQuery(eventsPage, EVENTS_PAGE_SIZE)
+  const events = eventsResult?.data ?? []
+  const totalEvents = eventsResult?.total ?? 0
+  const totalEventPages = eventsResult?.totalPages ?? 1
+  const { data: faculties = [] } = useFacultiesQuery()
   const createEvent = useCreateEventMutation()
   const updateEvent = useUpdateEventMutation()
   const deleteEvent = useDeleteEventMutation()
 
-  // Remove local filtering as it's now handled by backend
-  const filteredEvents = events
+  const filteredEvents = events.filter(event => {
+    const matchSearch =
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchStatus = statusFilter === "ALL" || event.status === statusFilter
+    return matchSearch && matchStatus
+  })
 
   const handleImageFile = async (file: File) => {
     setImagePreview(URL.createObjectURL(file))
@@ -105,26 +109,43 @@ export default function EventsPage() {
 
   const handleOpenEdit = (event: typeof events[0]) => {
     setEditingId(event.id)
-    // Parse the date back from vi-VN format (dd/mm/yyyy) to yyyy-mm-dd for input[type=date]
-    const parsedDate = (() => {
-      if (!event.date) return ""
-      const parts = event.date.split('/')
+    const parseDateStr = (isoOrVN: string) => {
+      if (!isoOrVN) return ""
+      // vi-VN format dd/mm/yyyy
+      const parts = isoOrVN.split('/')
       if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`
-      return event.date
-    })()
+      // ISO format — just take date part
+      return isoOrVN.split('T')[0]
+    }
+    const parseTimeStr = (iso: string) => {
+      if (!iso) return ""
+      const d = new Date(iso)
+      if (isNaN(d.getTime())) return ""
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+    }
     setNewEvent({
       title: event.title,
       description: event.description,
       location: event.location,
-      date: parsedDate,
-      endDate: parsedDate,
-      time: "",
+      date: parseDateStr(event.date),
+      endDate: event.endDate ? parseDateStr(event.endDate) : parseDateStr(event.date),
+      time: parseTimeStr(event.startDate),
       capacity: String(event.capacity),
+      organizer: event.organizer || "",
+      contactEmail: event.contactEmail || "",
+      contactPhone: event.contactPhone || "",
+      registrationDeadline: event.registrationDeadline ? parseDateStr(event.registrationDeadline) : "",
+      trainingPoints: event.trainingPoints ? String(event.trainingPoints) : "",
+      semester: event.semester || "",
+      academicYear: event.academicYear || "",
     })
     setImagePreview(getImageUrl(event.imageUrl) || null)
     setUploadedImageUrl(event.imageUrl || null)
     setEventDisplayMode((event.displayCategory as 'HERO' | 'FEATURED' | 'HIGHLIGHT' | 'NORMAL') || 'FEATURED')
     setEventCategory(event.eventCategory || 'ACADEMIC')
+    setSelectedFacultyId(event.facultyId ? String(event.facultyId) : 'none')
+    setIsMandatory(event.isMandatory || false)
+    setEventScale(event.scale || 'SCHOOL')
     setIsCreateOpen(true)
   }
 
@@ -138,12 +159,15 @@ export default function EventsPage() {
   }
 
   const resetForm = () => {
-    setNewEvent({ title: "", description: "", location: "", date: "", endDate: "", time: "", capacity: "200" })
+    setNewEvent({ title: "", description: "", location: "", date: "", endDate: "", time: "", capacity: "200", organizer: "", contactEmail: "", contactPhone: "", registrationDeadline: "", trainingPoints: "", semester: "", academicYear: "" })
     setImagePreview(null)
     setUploadedImageUrl(null)
     setEditingId(null)
     setEventDisplayMode('FEATURED')
     setEventCategory('ACADEMIC')
+    setSelectedFacultyId('none')
+    setIsMandatory(false)
+    setEventScale('SCHOOL')
     setIsCreateOpen(false)
   }
 
@@ -166,7 +190,17 @@ export default function EventsPage() {
       maxParticipants: parseInt(newEvent.capacity) || 200,
       displayCategory: eventDisplayMode,
       eventCategory: eventCategory,
+      scale: eventScale,
+      isMandatory,
       ...(uploadedImageUrl ? { imageUrl: uploadedImageUrl } : {}),
+      ...(selectedFacultyId && selectedFacultyId !== 'none' ? { facultyId: parseInt(selectedFacultyId) } : {}),
+      ...(newEvent.organizer ? { organizer: newEvent.organizer } : {}),
+      ...(newEvent.contactEmail ? { contactEmail: newEvent.contactEmail } : {}),
+      ...(newEvent.contactPhone ? { contactPhone: newEvent.contactPhone } : {}),
+      ...(newEvent.registrationDeadline ? { registrationDeadline: `${newEvent.registrationDeadline}T23:59:00.000Z` } : {}),
+      ...(newEvent.trainingPoints ? { trainingPoints: parseInt(newEvent.trainingPoints) } : {}),
+      ...(newEvent.semester ? { semester: newEvent.semester } : {}),
+      ...(newEvent.academicYear ? { academicYear: newEvent.academicYear } : {}),
     }
 
     try {
@@ -254,11 +288,11 @@ export default function EventsPage() {
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">TÊN SỰ KIỆN</Label>
-                <Input placeholder="VD: HỘI THẢO AI 2026" className="h-12 bg-slate-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500/20" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
+                <Input placeholder="VD: HỘI THẢO AI 2026" className="h-12 bg-slate-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-red-500/20" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">CHI TIẾT SỰ KIỆN</Label>
-                <Textarea placeholder="Nhập mô tả sự kiện..." className="min-h-[100px] sm:min-h-[120px] bg-slate-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-indigo-500/20 transition-all focus:bg-white" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} />
+                <Textarea placeholder="Nhập mô tả sự kiện..." className="min-h-[100px] sm:min-h-[120px] bg-slate-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-red-500/20 transition-all focus:bg-white" value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
@@ -297,9 +331,9 @@ export default function EventsPage() {
                       { value: 'HERO', label: 'ẢNH NỀN TRANG CHỦ (HERO)' },
                       { value: 'NORMAL', label: 'BÌNH THƯỜNG (ẨN)' },
                     ].map(({ value, label }) => (
-                      <button key={value} type="button" onClick={() => setEventDisplayMode(value as typeof eventDisplayMode)} className={`w-full flex items-center justify-between px-4 py-3 text-[10px] font-bold transition-colors ${eventDisplayMode === value ? "bg-slate-50 text-indigo-600" : "bg-white text-slate-600 hover:bg-slate-50"}`}>
+                      <button key={value} type="button" onClick={() => setEventDisplayMode(value as typeof eventDisplayMode)} className={`w-full flex items-center justify-between px-4 py-3 text-[10px] font-bold transition-colors ${eventDisplayMode === value ? "bg-slate-50 text-red-600" : "bg-white text-slate-600 hover:bg-slate-50"}`}>
                         {label}
-                        {eventDisplayMode === value && <Check className="w-3 h-3 text-indigo-600" />}
+                        {eventDisplayMode === value && <Check className="w-3 h-3 text-red-600" />}
                       </button>
                     ))}
                   </div>
@@ -327,6 +361,98 @@ export default function EventsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {faculties.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">KHOA TỔ CHỨC</Label>
+                    <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
+                      <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl text-[11px] font-bold">
+                        <SelectValue placeholder="Chọn khoa (tuỳ chọn)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-[11px] font-bold text-slate-400">Không chọn</SelectItem>
+                        {faculties.map((f: { id: string; name: string }) => (
+                          <SelectItem key={f.id} value={f.id} className="text-[11px] font-bold">{f.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Registration deadline + training points */}
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">HẠN ĐĂNG KÝ</Label>
+                  <Input type="date" value={newEvent.registrationDeadline} onChange={e => setNewEvent({ ...newEvent, registrationDeadline: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">ĐIỂM RÈN LUYỆN</Label>
+                  <Input type="number" min="0" placeholder="0" value={newEvent.trainingPoints} onChange={e => setNewEvent({ ...newEvent, trainingPoints: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
+              </div>
+
+              {/* Scale + isMandatory */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">QUY MÔ SỰ KIỆN</Label>
+                  <Select value={eventScale} onValueChange={setEventScale}>
+                    <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl text-[11px] font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: 'CLASS', label: 'Lớp học' },
+                        { value: 'FACULTY', label: 'Khoa' },
+                        { value: 'SCHOOL', label: 'Trường' },
+                        { value: 'UNIVERSITY', label: 'Đại học' },
+                        { value: 'NATIONAL', label: 'Quốc gia' },
+                      ].map(({ value, label }) => (
+                        <SelectItem key={value} value={value} className="text-[11px] font-bold">{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">BẮT BUỘC THAM DỰ</Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsMandatory(v => !v)}
+                    className={`w-full h-12 rounded-xl flex items-center justify-between px-4 text-[11px] font-bold transition-colors ${isMandatory ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-50 text-slate-500 border border-transparent'}`}
+                  >
+                    {isMandatory ? 'BẮT BUỘC' : 'TỰ NGUYỆN'}
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black transition-colors ${isMandatory ? 'bg-red-500' : 'bg-slate-300'}`}>
+                      {isMandatory ? <Check className="w-3 h-3" /> : '○'}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Organizer + contact */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">BAN TỔ CHỨC / NGƯỜI LIÊN HỆ</Label>
+                <Input placeholder="VD: Ban sự kiện Khoa CNTT" value={newEvent.organizer} onChange={e => setNewEvent({ ...newEvent, organizer: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">EMAIL LIÊN HỆ</Label>
+                  <Input type="email" placeholder="contact@va.edu.vn" value={newEvent.contactEmail} onChange={e => setNewEvent({ ...newEvent, contactEmail: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">SỐ ĐIỆN THOẠI</Label>
+                  <Input type="tel" placeholder="028 xxxx xxxx" value={newEvent.contactPhone} onChange={e => setNewEvent({ ...newEvent, contactPhone: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
+              </div>
+
+              {/* Semester + academic year */}
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">HỌC KỲ</Label>
+                  <Input placeholder="VD: HK1" value={newEvent.semester} onChange={e => setNewEvent({ ...newEvent, semester: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">NĂM HỌC</Label>
+                  <Input placeholder="VD: 2025-2026" value={newEvent.academicYear} onChange={e => setNewEvent({ ...newEvent, academicYear: e.target.value })} className="h-12 bg-slate-50 border-none rounded-xl" />
+                </div>
               </div>
             </div>
 
@@ -349,8 +475,8 @@ export default function EventsPage() {
           <CardHeader className="pb-3 px-4 sm:px-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="relative w-full lg:w-[400px] group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
-                <Input placeholder="Tìm kiếm sự kiện..." className="pl-9 h-10 transition-all focus-visible:ring-indigo-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-red-500 transition-colors" />
+                <Input placeholder="Tìm kiếm sự kiện..." className="pl-9 h-10 transition-all focus-visible:ring-red-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {[
@@ -364,7 +490,7 @@ export default function EventsPage() {
                     onClick={() => setStatusFilter(value)}
                     className={`h-9 px-4 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
                       statusFilter === value
-                        ? "bg-indigo-600 text-white shadow-sm"
+                        ? "bg-red-600 text-white shadow-sm"
                         : "border bg-white text-slate-500 hover:bg-slate-50"
                     }`}
                   >
@@ -396,11 +522,11 @@ export default function EventsPage() {
                     </TableRow>
                   ) : (
                     <AnimatePresence mode="popLayout" initial={false}>
-                      {filteredEvents.length > 0 ? filteredEvents.map((event) => (
+                      {filteredEvents.map((event) => (
                         <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={event.id} className="flex flex-col sm:table-row p-4 sm:p-0 border-b last:border-0 sm:border-b relative group hover:bg-slate-50/50 transition-colors">
                           <TableCell className="p-0 sm:p-4">
                             <Link href={`/events/${event.id}`} className="flex flex-col gap-0.5 hover:text-primary transition-colors">
-                              <span className="font-bold sm:font-semibold text-slate-900 line-clamp-1 group-hover:text-indigo-600 truncate transition-colors">{event.title}</span>
+                              <span className="font-bold sm:font-semibold text-slate-900 line-clamp-1 group-hover:text-red-600 truncate transition-colors">{event.title}</span>
                               <span className="text-xs text-muted-foreground line-clamp-1 sm:truncate max-w-[300px]">{event.description}</span>
                               <div className="md:hidden flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] text-slate-500 font-medium font-mono uppercase">
                                 <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {event.date}</span>
@@ -424,7 +550,7 @@ export default function EventsPage() {
                                 <span>{event.capacity > 0 ? Math.round((event.registeredCount / event.capacity) * 100) : 0}%</span>
                               </div>
                               <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${event.capacity > 0 ? (event.registeredCount / event.capacity) * 100 : 0}%` }} transition={{ duration: 1, ease: "easeOut" }} className="bg-indigo-600 h-full" />
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${event.capacity > 0 ? (event.registeredCount / event.capacity) * 100 : 0}%` }} transition={{ duration: 1, ease: "easeOut" }} className="bg-red-600 h-full" />
                               </div>
                             </div>
                           </TableCell>
@@ -446,7 +572,7 @@ export default function EventsPage() {
                                   <DropdownMenuItem className="cursor-pointer" onClick={() => handleOpenEdit(event)}>
                                     <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa thông tin
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="cursor-pointer">
+                                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(`http://localhost:3001/events/${event.id}`, '_blank')}>
                                     <ExternalLink className="mr-2 h-4 w-4" /> Xem trang đăng ký
                                   </DropdownMenuItem>
                                 </DropdownMenuGroup>
@@ -458,44 +584,20 @@ export default function EventsPage() {
                             </DropdownMenu>
                           </TableCell>
                         </motion.tr>
-                      )) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="h-32 text-center text-slate-400 italic text-sm">
-                            Không tìm thấy dữ liệu phù hợp.
-                          </TableCell>
-                        </TableRow>
-                      )}
+                      ))}
                     </AnimatePresence>
                   )}
                 </TableBody>
               </Table>
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-2 py-4">
-                <div className="text-sm text-slate-500">
-                  Trang {page} / {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    Trang trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    Trang sau
-                  </Button>
-                </div>
-              </div>
-            )}
           </CardContent>
+          <PaginationBar
+            page={eventsPage}
+            totalPages={totalEventPages}
+            total={totalEvents}
+            pageSize={EVENTS_PAGE_SIZE}
+            onPageChange={setEventsPage}
+          />
         </Card>
       </motion.div>
     </motion.div>

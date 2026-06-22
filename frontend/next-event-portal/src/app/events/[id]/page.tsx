@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { Calendar, MapPin, Clock, ArrowLeft, Users, Share2, CheckCircle2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, ArrowLeft, Users, Share2, CheckCircle2, Star, Phone, Mail, User, Award } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ export default function EventDetail() {
   const { registerForEvent, isUserRegistered } = useRegistrations();
 
   const event = events.find(e => e.id === id);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   if (!event) {
     return (
@@ -45,8 +46,6 @@ export default function EventDetail() {
 
   const registered = user ? isUserRegistered(user.uid, event.id) : false;
 
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const handleRegister = () => {
     if (!user) {
       toast.error(t('loginToRegister'));
@@ -56,10 +55,18 @@ export default function EventDetail() {
     setShowConfirm(true);
   };
 
-  const handleConfirmRegister = () => {
-    registerForEvent(user!.uid, event.id);
-    toast.success(t('registrationSuccess'));
+  const handleConfirmRegister = async () => {
     setShowConfirm(false);
+    try {
+      await registerForEvent(user!.uid, event.id);
+      toast.success(t('registrationSuccess'));
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Đăng ký thất bại. Vui lòng thử lại.';
+      toast.error(msg);
+    }
   };
 
   return (
@@ -88,7 +95,7 @@ export default function EventDetail() {
           </Button>
         </div>
 
-        <div className="absolute bottom-20 left-6 right-6 md:left-12 md:right-12 z-20">
+        <div className="absolute bottom-28 left-6 right-6 md:left-12 md:right-12 z-20">
           <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -103,7 +110,7 @@ export default function EventDetail() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-3xl sm:text-5xl md:text-8xl font-black text-white italic tracking-tighter uppercase leading-[0.85] max-w-4xl"
+              className="text-2xl sm:text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase leading-[1.1] max-w-4xl break-words"
             >
               {resolve(event.title)}
             </motion.h1>
@@ -126,7 +133,7 @@ export default function EventDetail() {
                   <Calendar className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày</p>
                   <p className="text-sm font-bold text-slate-900 italic uppercase">{event.date}</p>
                 </div>
               </div>
@@ -136,7 +143,7 @@ export default function EventDetail() {
                   <Clock className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Giờ</p>
                   <p className="text-sm font-bold text-slate-900 italic uppercase">{event.startTime}</p>
                 </div>
               </div>
@@ -146,7 +153,7 @@ export default function EventDetail() {
                   <MapPin className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div className="truncate">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa điểm</p>
                   <p className="text-sm font-bold text-slate-900 italic uppercase truncate">{resolve(event.location)}</p>
                 </div>
               </div>
@@ -161,11 +168,12 @@ export default function EventDetail() {
                 <div className="h-[1px] bg-slate-200 grow"></div>
               </div>
               
-              <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 shadow-xl shadow-slate-200/40 border border-slate-100/50">
-                <div className="prose prose-slate max-w-none">
-                  <div className="text-slate-600 text-base md:text-lg font-medium leading-relaxed whitespace-pre-wrap first-letter:text-4xl md:first-letter:text-5xl first-letter:font-black first-letter:text-red-600 first-letter:mr-3 first-letter:float-left">
-                    {resolve(event.description) || "No detailed description provided for this event yet. Check back soon for more updates and exciting announcements regarding the schedule, speakers, and activities planned for this session."}
-                  </div>
+              <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 shadow-xl shadow-slate-200/40 border border-slate-100/50">
+                <div className="flex gap-5 md:gap-8">
+                  <div className="w-1 shrink-0 rounded-full bg-gradient-to-b from-red-500 to-red-200 self-stretch" />
+                  <p className="text-slate-600 text-base md:text-[1.05rem] font-medium leading-[1.85] whitespace-pre-wrap tracking-normal">
+                    {resolve(event.description) || "Chưa có mô tả chi tiết cho sự kiện này. Vui lòng quay lại sau để xem thêm thông tin về lịch trình, diễn giả và các hoạt động được lên kế hoạch."}
+                  </p>
                 </div>
               </div>
             </section>
@@ -177,22 +185,59 @@ export default function EventDetail() {
                   <Users className="h-6 w-6 md:h-7 md:w-7 text-slate-400 group-hover:text-red-600 transition-colors" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Capacity</p>
-                  <p className="text-xl md:text-2xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">{event.capacity} People</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Limited spots available. RSVP now.</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sức chứa</p>
+                  <p className="text-xl md:text-2xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">{event.capacity} người</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Số chỗ có hạn, đăng ký sớm!</p>
                 </div>
               </div>
-              
+
               <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-lg shadow-slate-100 border border-slate-100 flex items-start gap-4 md:gap-6 group hover:border-red-100 transition-colors">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-red-50 transition-colors">
                   <Clock className="h-6 w-6 md:h-7 md:w-7 text-slate-400 group-hover:text-red-600 transition-colors" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registration Ends</p>
-                  <p className="text-xl md:text-2xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">{event.closingDate || event.date}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Don&apos;t miss the deadline.</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hạn đăng ký</p>
+                  <p className="text-xl md:text-2xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">
+                    {event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleDateString('vi-VN') : (event.closingDate || event.date)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">Đừng bỏ lỡ hạn chót.</p>
                 </div>
               </div>
+
+              {event.trainingPoints != null && event.trainingPoints > 0 && (
+                <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-lg shadow-slate-100 border border-slate-100 flex items-start gap-4 md:gap-6 group hover:border-amber-100 transition-colors">
+                  <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                    <Award className="h-6 w-6 md:h-7 md:w-7 text-amber-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Điểm rèn luyện</p>
+                    <p className="text-xl md:text-2xl font-black italic tracking-tighter text-slate-900 uppercase leading-none">+{event.trainingPoints} điểm</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{event.isMandatory ? 'Sự kiện bắt buộc' : 'Sự kiện tự nguyện'}</p>
+                  </div>
+                </div>
+              )}
+
+              {(event.organizer || event.contactEmail || event.contactPhone) && (
+                <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-lg shadow-slate-100 border border-slate-100 flex items-start gap-4 md:gap-6">
+                  <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <User className="h-6 w-6 md:h-7 md:w-7 text-blue-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</p>
+                    {event.organizer && <p className="text-sm font-bold text-slate-900">{event.organizer}</p>}
+                    {event.contactEmail && (
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                        <Mail className="h-3 w-3 shrink-0" /> {event.contactEmail}
+                      </p>
+                    )}
+                    {event.contactPhone && (
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 shrink-0" /> {event.contactPhone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -209,10 +254,10 @@ export default function EventDetail() {
                 
                 <div className="space-y-2 mb-8 md:mb-10">
                   <h3 className="text-2xl md:text-3xl font-black italic tracking-tighter text-slate-900 uppercase leading-[0.9]">
-                    Reserve Your Ticket
+                    Đặt Vé Ngay
                   </h3>
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">
-                    Available for all students
+                    Dành cho tất cả sinh viên
                   </p>
                 </div>
 
@@ -245,16 +290,16 @@ export default function EventDetail() {
                       className="flex-1 h-12 md:h-14 rounded-2xl font-black uppercase tracking-widest italic border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all text-[9px] md:text-[10px]"
                       onClick={() => {
                         navigator.clipboard.writeText(window.location.href);
-                        toast.success('Link copied to clipboard!');
+                        toast.success('Đã sao chép liên kết!');
                       }}
                     >
                       <Share2 className="h-4 w-4 mr-2 text-red-600" />
-                      Share
+                      Chia sẻ
                     </Button>
                     <Button 
                       variant="outline"
                       className="h-12 w-12 md:h-14 md:w-14 p-0 rounded-2xl border-slate-200 hover:bg-slate-50"
-                      onClick={() => toast.info('Adding to calendar...')}
+                      onClick={() => toast.info('Đang thêm vào lịch...')}
                     >
                       <Calendar className="h-4 w-4 md:h-5 md:w-5 text-slate-400" />
                     </Button>
@@ -262,7 +307,7 @@ export default function EventDetail() {
                 </div>
 
                 <p className="mt-6 md:mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
-                  Join {event.capacity - 12} others registered
+                  Đã có {event.registeredCount ?? 0} sinh viên đăng ký
                 </p>
               </div>
 

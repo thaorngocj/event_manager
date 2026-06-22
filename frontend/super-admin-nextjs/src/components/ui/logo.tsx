@@ -44,7 +44,7 @@ export const Logo: React.FC<LogoProps> = ({
       {showText && (
         <div className="flex flex-col leading-tight">
           <span className={cn("font-bold text-xl tracking-tight", textClassName)}>
-            VA <span className="text-indigo-600">Event</span>
+            VA <span className="text-red-600">Event</span>
           </span>
           <span className="text-[10px] uppercase tracking-[0.2em] font-semibold opacity-60">
             Management System

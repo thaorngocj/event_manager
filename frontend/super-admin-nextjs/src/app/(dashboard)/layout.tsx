@@ -28,8 +28,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex items-center justify-center h-screen w-screen bg-slate-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium">Đang tải...</p>
+          <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-500 font-black uppercase tracking-widest text-xs italic">Đang tải...</p>
         </div>
       </div>
     )

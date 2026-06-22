@@ -8,6 +8,12 @@ declare module 'next-auth' {
       accessToken: string
       refreshToken: string
       uid: string
+      trainingPoints?: number
+      major?: string
+      cohort?: string
+      classId?: string
+      unionRole?: string
+      facultyId?: string
     } & DefaultSession['user']
   }
 }
@@ -19,5 +25,11 @@ declare module 'next-auth/jwt' {
     accessToken?: string
     refreshToken?: string
     uid?: string
+    trainingPoints?: number
+    major?: string
+    cohort?: string
+    classId?: string
+    unionRole?: string
+    facultyId?: string
   }
 }

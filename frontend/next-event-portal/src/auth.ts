@@ -41,6 +41,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             let name = data.email
             let id = data.email
             let schoolId = ''
+            let major = ''
+            let cohort = ''
+            let classId = ''
+            let unionRole = ''
+            let facultyId = ''
+            let trainingPoints = 0
             try {
               const meRes = await fetch(`${API_URL}/users/me`, {
                 headers: {
@@ -53,6 +59,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 name = me.username || me.name || data.email
                 id = String(me.id || data.email)
                 schoolId = me.mssv || ''
+                major = me.major || ''
+                cohort = me.cohort || ''
+                classId = me.classId || ''
+                unionRole = me.unionRole || ''
+                facultyId = me.facultyId ? String(me.facultyId) : ''
+                trainingPoints = Number(me.trainingPoints) || 0
               }
             } catch { /* dùng email làm fallback */ }
             return {
@@ -61,6 +73,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name,
               role: data.role,
               schoolId,
+              major,
+              cohort,
+              classId,
+              unionRole,
+              facultyId,
+              trainingPoints,
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
             }
@@ -90,12 +108,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        const u = user as typeof user & { role: string; schoolId: string; accessToken: string; refreshToken: string }
+        const u = user as typeof user & {
+          role: string; schoolId: string; accessToken: string; refreshToken: string
+          major?: string; cohort?: string; classId?: string; unionRole?: string
+          facultyId?: string; trainingPoints?: number
+        }
         token.role = u.role
         token.schoolId = u.schoolId
         token.accessToken = u.accessToken
         token.refreshToken = u.refreshToken
         token.uid = user.id
+        token.major = u.major
+        token.cohort = u.cohort
+        token.classId = u.classId
+        token.unionRole = u.unionRole
+        token.facultyId = u.facultyId
+        token.trainingPoints = u.trainingPoints
       }
       return token
     },
@@ -105,6 +133,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.accessToken = token.accessToken as string
       session.user.refreshToken = token.refreshToken as string
       session.user.uid = token.uid as string
+      session.user.major = token.major as string | undefined
+      session.user.cohort = token.cohort as string | undefined
+      session.user.classId = token.classId as string | undefined
+      session.user.unionRole = token.unionRole as string | undefined
+      session.user.facultyId = token.facultyId as string | undefined
+      session.user.trainingPoints = token.trainingPoints as number | undefined
       return session
     },
   },

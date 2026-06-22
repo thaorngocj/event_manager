@@ -26,6 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: session.user.name || '',
         role: (session.user.role as UserRole) || UserRole.STUDENT,
         schoolId: session.user.schoolId,
+        trainingPoints: session.user.trainingPoints,
+        unionRole: session.user.unionRole,
+        major: session.user.major,
+        cohort: session.user.cohort,
+        classId: session.user.classId,
+        facultyId: session.user.facultyId,
         createdAt,
       }
     : null
@@ -51,8 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result?.error) {
       throw new Error('Login failed. Please check your credentials.')
     }
-    // Force session reload before returning
-    window.location.href = '/dashboard'
   }
 
   const signOut = async () => {

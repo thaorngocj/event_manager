@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { statisticsService } from '@/services/statistics.service'
-import { MOCK_STATS } from '@/lib/mock-data'
 
 export function useOverviewStats() {
   return useQuery({
@@ -18,7 +17,7 @@ export function useOverviewStats() {
           totalRegistrations: data.totalRegistrations ?? 0,
         }
       } catch {
-        return MOCK_STATS
+        return { totalUsers: 0, totalEvents: 0, totalCheckins: 0, checkInRate: 0, totalRegistrations: 0 }
       }
     },
   })

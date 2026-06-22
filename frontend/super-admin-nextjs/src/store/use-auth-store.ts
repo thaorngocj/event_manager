@@ -21,11 +21,6 @@ interface AuthState {
   logout: () => void
 }
 
-const DEMO_ACCOUNTS: Record<string, AuthUser> = {
-  'voly@university.edu.vn': { id: 'u0', name: 'Võ Ly', email: 'voly@university.edu.vn', role: 'SUPER_ADMIN', avatar: 'https://github.com/shadcn.png' },
-  'admin@university.edu.vn': { id: 'u1', name: 'Quản trị viên Hệ thống', email: 'admin@university.edu.vn', role: 'ADMIN', avatar: 'https://github.com/shadcn.png' },
-}
-
 function saveToken(token: string, remember: boolean) {
   if (typeof window === 'undefined') return
   // Luôn lưu vào sessionStorage để dùng trong tab hiện tại
@@ -57,9 +52,6 @@ export const useAuthStore = create<AuthState>()(
           // Backend trả về { accessToken, refreshToken, role, email }
           saveToken(res.accessToken, remember)
           const profile = await authService.getMe()
-          if (profile.role !== 'SUPER_ADMIN') {
-            throw new Error('UNAUTHORIZED_ROLE')
-          }
           const user: AuthUser = {
             id: String(profile.id),
             name: profile.username,
@@ -69,12 +61,8 @@ export const useAuthStore = create<AuthState>()(
           }
           set({ user, isAuthenticated: true, rememberMe: remember, accessToken: res.accessToken })
           return true
-        } catch (error: any) {
-          console.error("Login failed:", error)
-          if (error?.message === 'UNAUTHORIZED_ROLE') {
-            throw new Error('Tài khoản này không có quyền Super Admin.')
-          }
-          throw new Error('Tài khoản hoặc mật khẩu không chính xác. Vui lòng thử lại.')
+        } catch {
+          return false
         }
       },
       logout: () => {

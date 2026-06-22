@@ -26,8 +26,8 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const { data: eventsData, isLoading } = useEventsQuery()
-  const events = eventsData?.data || []
+  const { data: eventsResult, isLoading } = useEventsQuery()
+  const events = eventsResult?.data ?? []
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, typeof events> = {}
@@ -67,7 +67,7 @@ export default function CalendarPage() {
       case 'ĐANG DIỄN RA': return 'bg-emerald-500'
       case 'ĐÃ KẾT THÚC': return 'bg-slate-400'
       case 'ĐÃ HỦY': return 'bg-red-400'
-      default: return 'bg-indigo-500'
+      default: return 'bg-red-500'
     }
   }
 
@@ -128,11 +128,11 @@ export default function CalendarPage() {
                     onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                     className={`
                       relative min-h-[52px] p-1 rounded-lg text-left transition-all
-                      ${isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'hover:bg-slate-50'}
-                      ${isToday ? 'ring-1 ring-indigo-300' : ''}
+                      ${isSelected ? 'bg-red-50 ring-2 ring-red-500' : 'hover:bg-slate-50'}
+                      ${isToday ? 'ring-1 ring-red-300' : ''}
                     `}
                   >
-                    <span className={`text-xs font-semibold block mb-1 ${isToday ? 'text-indigo-600 font-bold' : 'text-slate-700'}`}>
+                    <span className={`text-xs font-semibold block mb-1 ${isToday ? 'text-red-600 font-bold' : 'text-slate-700'}`}>
                       {day}
                     </span>
                     <div className="flex flex-col gap-0.5">
@@ -189,7 +189,7 @@ export default function CalendarPage() {
                     <div
                       key={e.id}
                       onClick={() => router.push(`/events/${e.id}`)}
-                      className="p-3 rounded-lg border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-all"
+                      className="p-3 rounded-lg border border-slate-100 hover:border-red-200 hover:bg-red-50/30 cursor-pointer transition-all"
                     >
                       <div className="flex items-start gap-2">
                         <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${getStatusColor(e.status)}`} />

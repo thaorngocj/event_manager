@@ -3,7 +3,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { registrationService } from '@/services/registration.service'
-
 import { Registration } from '@/types'
 
 const STATUS_MAP: Record<string, Registration['status']> = {
@@ -50,7 +49,7 @@ export function useAllRegistrationsQuery(events: Array<{ id: string; title: stri
   return useQuery({
     queryKey: ['registrations', 'all', events.map(e => e.id).join(',')],
     queryFn: async () => {
-      if (!events.length) return []
+      if (!events.length) return [] as Registration[]
       try {
         const results = await Promise.allSettled(
           events.map(async event => {

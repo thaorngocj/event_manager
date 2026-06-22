@@ -7,13 +7,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Calendar, CalendarDays, History, ShieldCheck, Users, LogOut, Menu, Home, CheckCircle2, User } from 'lucide-react';
+import { LayoutDashboard, Calendar, History, ShieldCheck, Users, LogOut, Menu, Home, CheckCircle2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-
 import { Logo } from '@/components/Logo';
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -33,7 +32,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: t('homepage'), icon: Home, path: '/' },
     { name: t('dashboard'), icon: LayoutDashboard, path: '/dashboard' },
     { name: t('events'), icon: Calendar, path: '/events' },
-    { name: t('eventCalendar'), icon: CalendarDays, path: '/calendar' },
 
     // STUDENT: Xem sự kiện, Đăng ký, Nhận QR, Lịch sử ngày rèn luyện
     { name: t('myEvent'), icon: CheckCircle2, path: '/my-events', roles: ['STUDENT'] },

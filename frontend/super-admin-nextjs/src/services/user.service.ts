@@ -15,11 +15,15 @@ export const userService = {
     const { data } = await apiClient.get(`/users/${id}`)
     return data
   },
-  create: async (payload: { username: string; email: string; password: string; role: string }) => {
+  create: async (payload: {
+    username: string; email: string; password: string; role: string
+    mssv?: string; facultyId?: number; major?: string; cohort?: string; classId?: string
+    trainingPoints?: number; unionRole?: string
+  }) => {
     const { data } = await apiClient.post('/users/create', payload)
     return data
   },
-  update: async (id: string, payload: { username?: string; email?: string; role?: string }) => {
+  update: async (id: string, payload: { username?: string; email?: string; role?: string; mssv?: string; trainingPoints?: number; unionRole?: string }) => {
     const { data } = await apiClient.patch(`/users/${id}`, payload)
     return data
   },
@@ -41,6 +45,18 @@ export const userService = {
   },
   updateProfile: async (payload: { username?: string; email?: string }) => {
     const { data } = await apiClient.patch('/users/me', payload)
+    return data
+  },
+  downloadImportTemplate: async () => {
+    const response = await apiClient.get('/users/import/template', { responseType: 'blob' })
+    return response
+  },
+  importUsers: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await apiClient.post('/users/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return data
   },
 }

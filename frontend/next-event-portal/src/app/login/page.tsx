@@ -43,9 +43,10 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      // signIn internally redirects to /dashboard via window.location.href
+      router.push('/dashboard');
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -57,8 +58,10 @@ export default function Login() {
     setErrorMsg(null);
     try {
       await signIn(mockEmail, 'password123');
+      router.push('/dashboard');
     } catch {
       setErrorMsg('Demo login failed.');
+    } finally {
       setIsSubmitting(false);
     }
   };

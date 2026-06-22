@@ -218,9 +218,15 @@ export default function ParticipatedEvents() {
                             <td className="p-4">
                                <span className={cn(
                                  "px-2 py-1 rounded-sm text-[9px] font-black text-white uppercase tracking-tighter",
-                                 reg.status === 'ATTENDED' ? "bg-green-600" : "bg-red-500"
+                                 reg.status === 'ATTENDED' ? "bg-green-600" :
+                                 reg.status === 'APPROVED' ? "bg-blue-500" :
+                                 reg.status === 'CANCELLED' ? "bg-gray-400" :
+                                 "bg-yellow-500"
                                )}>
-                                 {reg.status === 'ATTENDED' ? t('attendanceTaken') : t('noRollCallYet')}
+                                 {reg.status === 'ATTENDED' ? t('attendanceTaken') :
+                                  reg.status === 'APPROVED' ? t('approved') :
+                                  reg.status === 'CANCELLED' ? 'Đã hủy' :
+                                  t('noRollCallYet')}
                                </span>
                             </td>
                             <td className="p-4">
@@ -278,9 +284,15 @@ export default function ParticipatedEvents() {
                           </Link>
                           <Badge className={cn(
                             "text-[8px] font-black px-3 py-1.5 uppercase tracking-widest border-none shrink-0 shadow-sm",
-                            reg.status === 'ATTENDED' ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"
+                            reg.status === 'ATTENDED' ? "bg-emerald-100 text-emerald-700" :
+                            reg.status === 'APPROVED' ? "bg-blue-100 text-blue-700" :
+                            reg.status === 'CANCELLED' ? "bg-slate-100 text-slate-500" :
+                            "bg-yellow-100 text-yellow-700"
                           )}>
-                            {reg.status === 'ATTENDED' ? 'VERIFIED' : 'PENDING'}
+                            {reg.status === 'ATTENDED' ? 'VERIFIED' :
+                             reg.status === 'APPROVED' ? 'APPROVED' :
+                             reg.status === 'CANCELLED' ? 'CANCELLED' :
+                             'WAITING'}
                           </Badge>
                         </div>
                         

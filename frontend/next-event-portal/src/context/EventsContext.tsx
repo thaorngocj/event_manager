@@ -13,6 +13,7 @@ interface EventsContextType {
   addEvent: (event: Omit<Event, 'id' | 'createdAt'>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   updateEvent: (id: string, event: Partial<Event>) => Promise<void>;
+  refreshEvents: () => Promise<void>;
 }
 
 const STORAGE_KEY = 'va_events';
@@ -27,9 +28,9 @@ const STATUS_MAP: Record<string, EventStatus> = {
   CANCELLED: EventStatus.CLOSED,
 };
 
-export function toUiEvent(e: Record<string, unknown>): Event {
+function toUiEvent(e: Record<string, unknown>): Event {
   const startDate = e.startDate ? new Date(e.startDate as string) : new Date();
-  const endDate = e.endDate ? new Date(e.endDate as string) : new Date();
+  const endDateObj = e.endDate ? new Date(e.endDate as string) : startDate;
   return {
     id: String(e.id),
     slug: (e.slug as string) ?? String(e.id),
@@ -37,8 +38,9 @@ export function toUiEvent(e: Record<string, unknown>): Event {
     description: (e.description as string) ?? '',
     location: (e.location as string) ?? '',
     date: startDate.toISOString().split('T')[0],
+    endDate: endDateObj.toISOString().split('T')[0],
     startTime: startDate.toTimeString().slice(0, 5),
-    endTime: endDate.toTimeString().slice(0, 5),
+    endTime: endDateObj.toTimeString().slice(0, 5),
     capacity: (e.maxParticipants as number) ?? 0,
     status: STATUS_MAP[e.status as string] ?? EventStatus.OPEN,
     organizerId: String(e.organizerId || e.createdBy || 'admin'),
@@ -49,6 +51,17 @@ export function toUiEvent(e: Record<string, unknown>): Event {
     createdAt: e.createdAt ? new Date(e.createdAt as string).getTime() : Date.now(),
     isRegistrationOpen: typeof e.isRegistrationOpen === 'boolean' ? e.isRegistrationOpen : true,
     registeredCount: Number(e.registeredCount) || 0,
+    trainingPoints: (e.trainingPoints as number) ?? undefined,
+    registrationDeadline: (e.registrationDeadline as string) ?? undefined,
+    organizer: (e.organizer as string) ?? undefined,
+    contactEmail: (e.contactEmail as string) ?? undefined,
+    contactPhone: (e.contactPhone as string) ?? undefined,
+    isMandatory: (e.isMandatory as boolean) ?? false,
+    scale: (e.scale as string) ?? undefined,
+    isCancelled: (e.isCancelled as boolean) ?? false,
+    semester: (e.semester as string) ?? undefined,
+    academicYear: (e.academicYear as string) ?? undefined,
+    facultyId: e.facultyId ? String(e.facultyId) : undefined,
   };
 }
 
@@ -57,7 +70,9 @@ function toApiPayload(eventData: Omit<Event, 'id' | 'createdAt'>) {
     typeof val === 'string' ? val : (val?.[lang] || val?.EN || '');
 
   const startDate = `${eventData.date}T${eventData.startTime || '00:00'}:00.000Z`;
-  const endDate = `${eventData.date}T${eventData.endTime || '23:59'}:00.000Z`;
+  const endDate = eventData.endDate
+    ? `${eventData.endDate}T${eventData.endTime || '23:59'}:00.000Z`
+    : `${eventData.date}T${eventData.endTime || '23:59'}:00.000Z`;
 
   return {
     title: str(eventData.title),
@@ -69,6 +84,17 @@ function toApiPayload(eventData: Omit<Event, 'id' | 'createdAt'>) {
     imageUrl: eventData.image,
     displayCategory: eventData.displayCategory,
     eventCategory: eventData.category,
+    ...(eventData.trainingPoints != null ? { trainingPoints: eventData.trainingPoints } : {}),
+    ...(eventData.registrationDeadline ? { registrationDeadline: eventData.registrationDeadline } : {}),
+    ...(eventData.organizer ? { organizer: eventData.organizer } : {}),
+    ...(eventData.contactEmail ? { contactEmail: eventData.contactEmail } : {}),
+    ...(eventData.contactPhone ? { contactPhone: eventData.contactPhone } : {}),
+    ...(eventData.isMandatory != null ? { isMandatory: eventData.isMandatory } : {}),
+    ...(eventData.scale ? { scale: eventData.scale } : {}),
+    ...(eventData.semester ? { semester: eventData.semester } : {}),
+    ...(eventData.academicYear ? { academicYear: eventData.academicYear } : {}),
+    ...(eventData.facultyId ? { facultyId: Number(eventData.facultyId) } : {}),
+    ...(eventData.isCancelled != null ? { isCancelled: eventData.isCancelled } : {}),
   };
 }
 
@@ -93,6 +119,10 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error("Failed to load events:", error);
+      }
+      const cached = typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        try { setEvents(JSON.parse(cached)); return; } catch { /* ignore */ }
       }
       setEvents([]);
     }
@@ -151,8 +181,20 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persistLocal, events]);
 
+  const refreshEvents = useCallback(async () => {
+    try {
+      const data = await eventService.getAll();
+      const list: Record<string, unknown>[] = Array.isArray(data) ? data : (data?.data ?? data?.items ?? []);
+      const uiEvents = list.map(toUiEvent);
+      setEvents(uiEvents);
+      persistLocal(uiEvents);
+    } catch {
+      // keep existing state on refresh failure
+    }
+  }, [persistLocal]);
+
   return (
-    <EventsContext.Provider value={{ events, isLoading, searchQuery, setSearchQuery, addEvent, deleteEvent, updateEvent }}>
+    <EventsContext.Provider value={{ events, isLoading, searchQuery, setSearchQuery, addEvent, deleteEvent, updateEvent, refreshEvents }}>
       {children}
     </EventsContext.Provider>
   );

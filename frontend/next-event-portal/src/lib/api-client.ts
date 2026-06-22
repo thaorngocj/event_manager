@@ -1,7 +1,11 @@
 import axios from 'axios'
 import { signOut } from 'next-auth/react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.0.10.29:3000/api/v1'
+// Dùng proxy của Next.js để tránh CORS/ngrok warning
+const API_URL = typeof window !== 'undefined'
+  ? '/api/proxy'
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1')
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {

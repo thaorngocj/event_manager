@@ -65,9 +65,16 @@ export default function PersonalInfo() {
 
   const userInfo = [
     { label: 'Họ và tên', value: user?.displayName || '', field: 'name' },
-    { label: isStudent ? 'MSSV - Tên - Lớp' : 'Mã hệ thống - Tên', value: `${user?.schoolId || ''} - ${user?.displayName || ''}${isStudent ? ' - 71K29CNTT07' : ''}`, field: null },
+    { label: 'MSSV', value: user?.schoolId || '—', field: null },
     { label: 'Địa chỉ Email', value: user?.email || '', field: 'email' },
-    { label: isStudent ? 'Khoa' : 'Vai trò', value: isStudent ? 'Khoa Công nghệ thông tin' : (user?.role || ''), field: null },
+    { label: 'Vai trò', value: user?.role || '', field: null },
+    ...(isStudent ? [
+      { label: 'Ngành học', value: user?.major || '—', field: null },
+      { label: 'Khóa', value: user?.cohort || '—', field: null },
+      { label: 'Lớp', value: user?.classId || '—', field: null },
+      { label: 'Chức vụ Đoàn/Hội', value: user?.unionRole || '—', field: null },
+      { label: 'Điểm rèn luyện', value: user?.trainingPoints != null ? String(user.trainingPoints) : '—', field: null },
+    ] : []),
   ]
 
   return (
@@ -169,11 +176,21 @@ export default function PersonalInfo() {
                       />
                     </div>
                     <div className="border border-slate-100 p-4 rounded-sm bg-slate-50/50">
-                      <span className="text-[11px] font-black uppercase tracking-widest text-[#1e3a5f] block mb-1">
-                        {isStudent ? 'MSSV - Tên - Lớp' : 'Mã hệ thống'}
-                      </span>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-[#1e3a5f] block mb-1">MSSV</span>
                       <span className="text-[11px] font-bold text-slate-400 uppercase">{user?.schoolId || '-'}</span>
                     </div>
+                    {isStudent && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="border border-slate-100 p-4 rounded-sm bg-slate-50/50">
+                          <span className="text-[11px] font-black uppercase tracking-widest text-[#1e3a5f] block mb-1">Lớp</span>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase">{user?.classId || '-'}</span>
+                        </div>
+                        <div className="border border-slate-100 p-4 rounded-sm bg-slate-50/50">
+                          <span className="text-[11px] font-black uppercase tracking-widest text-[#1e3a5f] block mb-1">Điểm rèn luyện</span>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase">{user?.trainingPoints ?? '-'}</span>
+                        </div>
+                      </div>
+                    )}
                     <Button
                       onClick={handleSave}
                       disabled={isSaving}

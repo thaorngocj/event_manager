@@ -4,22 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventService } from '@/services/event.service'
 import { Event } from '@/types'
 
-import { toUiEvent } from '@/context/EventsContext'
-
 export function useEventsQuery(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: ['events', params],
-    queryFn: async () => {
-      const response = await eventService.getAll(params);
-      const list: Record<string, unknown>[] = Array.isArray(response) ? response : (response?.data ?? response?.items ?? []);
-      return {
-        data: list.map(toUiEvent),
-        total: response?.total ?? list.length,
-        page: response?.page ?? 1,
-        limit: response?.limit ?? list.length,
-        totalPages: response?.totalPages ?? 1,
-      };
-    },
+    queryFn: () => eventService.getAll(params),
   })
 }
 
