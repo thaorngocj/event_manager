@@ -1,0 +1,690 @@
+openapi: 3.0.0
+info:
+  title: Quản lý ngày rèn luyện API
+  version: 1.0.0
+  description: API cho hệ thống quản lý ngày rèn luyện
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Server
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Events
+  - name: Registrations
+  - name: Statistics
+  - name: Upload
+
+paths:
+
+  /:
+    get:
+      tags:
+        - App
+      summary: Kiểm tra API hoạt động
+      responses:
+        '200':
+          description: API running
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Đăng nhập
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Làm mới access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Refresh token thành công
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Yêu cầu reset password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Đã gửi email reset password
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Đặt lại mật khẩu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+
+  /users/create:
+    post:
+      tags:
+        - Users
+      summary: [SUPER_ADMIN] Tạo user mới
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+      responses:
+        '201':
+          description: User created
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: [ADMIN+] Danh sách user
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Danh sách user
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Xem profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+
+    patch:
+      tags:
+        - Users
+      summary: Cập nhật profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileDto'
+      responses:
+        '200':
+          description: Updated
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Xem user theo ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User detail
+
+    patch:
+      tags:
+        - Users
+      summary: [SUPER_ADMIN] Cập nhật user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDto'
+      responses:
+        '200':
+          description: Updated
+
+    delete:
+      tags:
+        - Users
+      summary: [SUPER_ADMIN] Xoá user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Deleted
+
+  /users/{id}/role:
+    patch:
+      tags:
+        - Users
+      summary: [SUPER_ADMIN] Đổi role
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum:
+                    - SUPER_ADMIN
+                    - ADMIN
+                    - EVENT_MANAGER
+                    - STUDENT
+      responses:
+        '200':
+          description: Role updated
+
+  /users/{id}/deactivate:
+    patch:
+      tags:
+        - Users
+      summary: Vô hiệu hoá tài khoản
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Account deactivated
+
+  /users/{id}/activate:
+    patch:
+      tags:
+        - Users
+      summary: Kích hoạt tài khoản
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Account activated
+
+  /events:
+    get:
+      tags:
+        - Events
+      summary: Danh sách sự kiện
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Event list
+
+    post:
+      tags:
+        - Events
+      summary: Tạo sự kiện
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventDto'
+      responses:
+        '201':
+          description: Event created
+
+  /events/calendar:
+    get:
+      tags:
+        - Events
+      summary: Lịch sự kiện
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Calendar data
+
+  /events/import-template:
+    get:
+      tags:
+        - Events
+      summary: Tải file Excel mẫu
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Excel template
+
+  /events/import-template-events:
+    get:
+      tags:
+        - Events
+      summary: Tải template sự kiện
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Template downloaded
+
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Chi tiết sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail
+
+    patch:
+      tags:
+        - Events
+      summary: Cập nhật sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEventDto'
+      responses:
+        '200':
+          description: Event updated
+
+    delete:
+      tags:
+        - Events
+      summary: Xoá sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event deleted
+
+  /events/import:
+    post:
+      tags:
+        - Events
+      summary: Import Excel
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Imported
+
+  /events/{id}/import:
+    post:
+      tags:
+        - Events
+      summary: Import danh sách tham dự
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Imported attendees
+
+  /events/{id}/registrations:
+    get:
+      tags:
+        - Events
+      summary: Danh sách đăng ký
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Registration list
+
+  /events/{id}/import-history:
+    get:
+      tags:
+        - Events
+      summary: Lịch sử import
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Import history
+
+  /events/{id}/export:
+    get:
+      tags:
+        - Events
+      summary: Export danh sách
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Exported file
+
+  /registrations/events/{eventId}/register:
+    post:
+      tags:
+        - Registrations
+      summary: Đăng ký sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '201':
+          description: Registered
+
+  /registrations/events/{eventId}/checkin:
+    post:
+      tags:
+        - Registrations
+      summary: Check-in sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Checked in
+
+  /registrations/my-events:
+    get:
+      tags:
+        - Registrations
+      summary: Sự kiện của tôi
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: My events
+
+  /registrations/{id}/cancel:
+    delete:
+      tags:
+        - Registrations
+      summary: Huỷ đăng ký
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancelled
+
+  /registrations/events/{eventId}/manual-checkin:
+    post:
+      tags:
+        - Registrations
+      summary: Check-in thủ công
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Manual checked in
+
+  /statistics/overview:
+    get:
+      tags:
+        - Statistics
+      summary: Thống kê tổng quan
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Overview stats
+
+  /statistics/events/{eventId}:
+    get:
+      tags:
+        - Statistics
+      summary: Thống kê sự kiện
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event statistics
+
+  /statistics/students/top:
+    get:
+      tags:
+        - Statistics
+      summary: Top sinh viên tham gia
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Top students
+
+  /upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload file
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+    EventId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+
+    LoginDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        active:
+          type: boolean
+
+    CreateUserDto:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - role
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+
+    UpdateUserDto:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+
+    UpdateProfileDto:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+
+    CreateEventDto:
+      type: object
+      required:
+        - title
+        - description
+        - startDate
+        - endDate
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        banner:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+
+    UpdateEventDto:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        banner:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer

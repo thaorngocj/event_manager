@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('lucide-react'\\); require\\('axios'\\); require\\('tailwind-merge'\\); console.log\\('OK'\\)\")",
+      "Bash(npx next *)",
+      "Bash(node -e \"const pkg = require\\('react-day-picker/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(node -e \"const { getDefaultClassNames } = require\\('react-day-picker'\\); const cn = getDefaultClassNames\\(\\); console.log\\(Object.keys\\(cn\\)\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(node -e \"const p = require\\('./node_modules/next-auth/package.json'\\); console.log\\(p.version\\)\")"
+    ]
+  }
+}

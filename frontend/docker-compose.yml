@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mydb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  next-event-portal:
+    build:
+      context: ./next-event-portal
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: next_event_portal
+    ports:
+      - "3001:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_API_URL=https://domain-chewing-purple.ngrok-free.dev/api/v1
+    restart: on-failure
+
+  super-admin-nextjs:
+    build:
+      context: ./super-admin-nextjs
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: super_admin_nextjs
+    ports:
+      - "3002:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_API_URL=https://domain-chewing-purple.ngrok-free.dev/api/v1
+    restart: on-failure
+
+volumes:
+  postgres_data:
