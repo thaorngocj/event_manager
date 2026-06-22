@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
  * @license
@@ -63,6 +63,15 @@ export default function Events() {
   const { user } = useAuth();
   const { events, deleteEvent, updateEvent, searchQuery, refreshEvents } = useEvents();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Sync viewMode with URL query param ?tab=calendar
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'calendar') {
+      setViewMode('calendar');
+    }
+  }, [searchParams]);
 
   const [newEvent, setNewEvent] = useState({
     title: '', description: '', location: '',

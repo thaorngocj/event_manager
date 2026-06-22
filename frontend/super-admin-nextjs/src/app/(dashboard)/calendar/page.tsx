@@ -127,7 +127,7 @@ export default function CalendarPage() {
                     key={day}
                     onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                     className={`
-                      relative min-h-[52px] p-1 rounded-lg text-left transition-all
+                      relative min-h-13 p-1 rounded-lg text-left transition-all
                       ${isSelected ? 'bg-red-50 ring-2 ring-red-500' : 'hover:bg-slate-50'}
                       ${isToday ? 'ring-1 ring-red-300' : ''}
                     `}

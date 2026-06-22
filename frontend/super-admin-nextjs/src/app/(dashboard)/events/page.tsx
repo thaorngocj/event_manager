@@ -522,7 +522,13 @@ export default function EventsPage() {
                     </TableRow>
                   ) : (
                     <AnimatePresence mode="popLayout" initial={false}>
-                      {filteredEvents.map((event) => (
+                      {filteredEvents.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-32 text-center text-slate-400 italic text-sm">
+                            Không tìm thấy dữ liệu phù hợp.
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredEvents.map((event) => (
                         <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={event.id} className="flex flex-col sm:table-row p-4 sm:p-0 border-b last:border-0 sm:border-b relative group hover:bg-slate-50/50 transition-colors">
                           <TableCell className="p-0 sm:p-4">
                             <Link href={`/events/${event.id}`} className="flex flex-col gap-0.5 hover:text-primary transition-colors">

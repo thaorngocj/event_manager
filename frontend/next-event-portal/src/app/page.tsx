@@ -166,7 +166,7 @@ export default function LandingPage() {
         <div className="hidden md:flex items-center gap-8">
           <Link href="/" className={`text-sm font-bold transition-colors ${isScrolled ? 'text-slate-800 hover:text-red-600' : 'text-white hover:text-white/70'}`}>{t('homepage')}</Link>
           <Link href="/events" className={`text-sm font-bold transition-colors ${isScrolled ? 'text-slate-800 hover:text-red-600' : 'text-white hover:text-white/70'}`}>{t('conferenceEvent')}</Link>
-          <Link href="/calendar" className={`text-sm font-bold transition-colors ${isScrolled ? 'text-slate-800 hover:text-red-600' : 'text-white hover:text-white/70'}`}>{t('eventCalendar')}</Link>
+          <Link href="/events?tab=calendar" className={`text-sm font-bold transition-colors ${isScrolled ? 'text-slate-800 hover:text-red-600' : 'text-white hover:text-white/70'}`}>{t('eventCalendar')}</Link>
           <div className="relative group">
             <Link href="/my-events" className={`text-sm font-bold transition-colors flex items-center gap-1 ${isScrolled ? 'text-slate-800 hover:text-red-600' : 'text-white hover:text-white/70'}`}>
               {t('myEvent')}
@@ -253,7 +253,7 @@ export default function LandingPage() {
                     <Calendar className="h-4 w-4" />
                     <span className="text-[13px] font-medium">{t('conferenceEvent')}</span>
                   </Link>
-                  <Link href="/calendar" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-red-600 transition-colors border-b border-slate-50/50">
+                  <Link href="/events?tab=calendar" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-4 py-3 text-slate-500 hover:text-red-600 transition-colors border-b border-slate-50/50">
                     <Clock className="h-4 w-4" />
                     <span className="text-[13px] font-medium">{t('eventCalendar')}</span>
                   </Link>
