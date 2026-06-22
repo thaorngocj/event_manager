@@ -65,8 +65,8 @@ export default function ProfilePage() {
       {/* Avatar + Role */}
       <Card className="bg-white shadow-sm">
         <CardContent className="pt-6 flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <User className="w-8 h-8 text-indigo-600" />
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+            <User className="w-8 h-8 text-red-600" />
           </div>
           <div className="space-y-1.5">
             <p className="text-lg font-bold text-slate-900">{user?.name}</p>
@@ -148,7 +148,7 @@ export default function ProfilePage() {
               <Label>Email tài khoản</Label>
               <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="email@school.edu" />
             </div>
-            <Button onClick={handleForgotPassword} disabled={sending} className="w-full h-11 bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={handleForgotPassword} disabled={sending} className="w-full h-11 bg-red-600 hover:bg-red-700">
               {sending ? "Đang gửi..." : "Gửi link đặt lại mật khẩu"}
             </Button>
           </CardContent>

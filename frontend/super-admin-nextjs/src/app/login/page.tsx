@@ -14,8 +14,8 @@ import { motion, AnimatePresence } from "motion/react"
 import { Logo } from "@/components/ui/logo"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("voly@university.edu.vn")
-  const [password, setPassword] = useState("password123")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -36,10 +36,14 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
     try {
-      await login(email, password, rememberMe)
-      router.push("/dashboard")
-    } catch (err: any) {
-      setError(err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.")
+      const success = await login(email, password, rememberMe)
+      if (success) {
+        router.push("/dashboard")
+      } else {
+        setError("Tài khoản hoặc mật khẩu không chính xác. Vui lòng thử lại.")
+      }
+    } catch {
+      setError("Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.")
     } finally {
       setIsLoading(false)
     }
@@ -47,9 +51,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600" />
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -65,7 +69,7 @@ export default function LoginPage() {
 
         <Card className="border-slate-200 shadow-xl shadow-slate-200/50">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Đăng nhập</CardTitle>
+            <CardTitle className="text-xl font-black italic uppercase tracking-tight">Đăng nhập</CardTitle>
             <CardDescription>Nhập thông tin tài khoản của bạn để truy cập hệ thống</CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
@@ -92,7 +96,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="name@university.edu.vn"
-                    className="pl-10 h-11 border-slate-200 focus:ring-indigo-500"
+                    className="pl-10 h-11 border-slate-200 focus:ring-red-500"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -103,7 +107,7 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Mật khẩu</Label>
-                  <a href="/forgot-password" className="text-xs text-indigo-600 hover:underline font-medium">
+                  <a href="/forgot-password" className="text-xs text-red-600 hover:underline font-medium">
                     Quên mật khẩu?
                   </a>
                 </div>
@@ -112,7 +116,7 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    className="pl-10 pr-10 h-11 border-slate-200 focus:ring-indigo-500"
+                    className="pl-10 pr-10 h-11 border-slate-200 focus:ring-red-500"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -145,7 +149,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all"
+                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-all"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -160,7 +164,7 @@ export default function LoginPage() {
               <div className="text-center">
                 <p className="text-sm text-slate-500">
                   Bạn gặp sự cố khi đăng nhập?{" "}
-                  <a href="#" className="text-indigo-600 hover:underline font-medium">Liên hệ hỗ trợ</a>
+                  <a href="#" className="text-red-600 hover:underline font-medium">Liên hệ hỗ trợ</a>
                 </p>
               </div>
             </CardFooter>

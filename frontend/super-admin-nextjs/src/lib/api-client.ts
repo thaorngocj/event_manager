@@ -1,5 +1,9 @@
 import axios from 'axios'
 
+// // Dùng proxy của Next.js để tránh CORS/ngrok warning
+// const API_URL = typeof window !== 'undefined'
+//   ? '/api/proxy'
+//   : (process.env.NEXT_PUBLIC_API_URL || 'http://3000/api/v1')
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.0.10.29:3000/api/v1'
 
 export const apiClient = axios.create({

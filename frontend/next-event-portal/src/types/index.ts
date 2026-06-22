@@ -17,6 +17,12 @@ export interface UserProfile {
   displayName: string
   role: UserRole
   schoolId?: string
+  trainingPoints?: number
+  unionRole?: string
+  major?: string
+  cohort?: string
+  classId?: string
+  facultyId?: string
   createdAt: number
 }
 
@@ -27,6 +33,7 @@ export interface Event {
   description: string | { EN: string; VI: string }
   location: string | { EN: string; VI: string }
   date: string
+  endDate?: string
   startTime: string
   endTime: string
   capacity: number
@@ -40,6 +47,17 @@ export interface Event {
   createdAt: number
   isRegistrationOpen?: boolean
   registeredCount?: number
+  trainingPoints?: number
+  registrationDeadline?: string
+  organizer?: string
+  contactEmail?: string
+  contactPhone?: string
+  isMandatory?: boolean
+  scale?: string
+  isCancelled?: boolean
+  semester?: string
+  academicYear?: string
+  facultyId?: string
 }
 
 export interface Registration {

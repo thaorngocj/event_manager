@@ -48,7 +48,7 @@ function ResetPasswordContent() {
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
             <p className="font-semibold text-slate-900">Link không hợp lệ</p>
             <p className="text-sm text-slate-500">Vui lòng yêu cầu đặt lại mật khẩu lại.</p>
-            <Button onClick={() => router.push("/forgot-password")} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={() => router.push("/forgot-password")} className="bg-red-600 hover:bg-red-700">
               Quên mật khẩu
             </Button>
           </CardContent>
@@ -59,9 +59,9 @@ function ResetPasswordContent() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600" />
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -93,7 +93,7 @@ function ResetPasswordContent() {
                   <p className="font-semibold text-slate-900">Đặt lại mật khẩu thành công!</p>
                   <p className="text-sm text-slate-500 mt-1">Bạn có thể đăng nhập với mật khẩu mới.</p>
                 </div>
-                <Button onClick={() => router.push("/login")} className="mt-2 bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={() => router.push("/login")} className="mt-2 bg-red-600 hover:bg-red-700">
                   Đăng nhập ngay
                 </Button>
               </motion.div>
@@ -152,7 +152,7 @@ function ResetPasswordContent() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold" disabled={isLoading}>
+                <Button type="submit" className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-semibold" disabled={isLoading}>
                   {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang xử lý...</> : "Đặt lại mật khẩu"}
                 </Button>
               </CardFooter>
@@ -166,7 +166,7 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>}>
       <ResetPasswordContent />
     </Suspense>
   )

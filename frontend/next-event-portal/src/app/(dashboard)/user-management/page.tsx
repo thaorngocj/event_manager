@@ -2,26 +2,142 @@
 
 import { useRouter } from 'next/navigation';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserRole } from '@/types';
-import { UserCog, User, Search, Mail, Fingerprint, ShieldCheck, Filter, Download } from 'lucide-react';
+import { UserCog, User, Search, Mail, Fingerprint, ShieldCheck, Filter, Download, Upload, X, CheckCircle2, AlertCircle, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useUsers } from '@/context/UsersContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { userService } from '@/services/user.service';
+import { toast } from 'sonner';
+
+type ImportRow = {
+  email: string;
+  password: string;
+  schoolId: string;
+  role: string;
+  name: string;
+  status: 'pending' | 'success' | 'error';
+  error?: string;
+};
 
 export default function UserManagement() {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const { user: currentUser } = useAuth();
   const { users, loading } = useUsers();
+
+  // ── Excel import state ──
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExcelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (e.target) e.target.value = '';
+
+    try {
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
+
+      if (raw.length === 0) { toast.error('File Excel không có dữ liệu'); return; }
+
+      // Normalize column headers (case-insensitive, trim spaces)
+      const norm = (v: unknown) => String(v ?? '').trim();
+      const findCol = (row: Record<string, unknown>, ...keys: string[]) => {
+        for (const k of Object.keys(row)) {
+          if (keys.some(key => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''))) {
+            return norm(row[k]);
+          }
+        }
+        return '';
+      };
+
+      const rows: ImportRow[] = raw.map(r => {
+        const email    = findCol(r, 'email');
+        const password = findCol(r, 'password', 'matkhau', 'mật khẩu');
+        const schoolId = findCol(r, 'mssv', 'schoolid', 'studentid', 'masinhvien', 'mã số sinh viên');
+        const rolRaw   = findCol(r, 'role', 'vaitro', 'vai trò', 'chucvu');
+        const name     = findCol(r, 'name', 'hoten', 'họ tên', 'fullname', 'ten');
+
+        // Map role text → enum
+        const roleMap: Record<string, string> = {
+          admin: UserRole.ADMIN,
+          'quản trị': UserRole.ADMIN,
+          'quan tri': UserRole.ADMIN,
+          'event_manager': UserRole.EVENT_MANAGER,
+          'eventmanager': UserRole.EVENT_MANAGER,
+          'ban to chuc': UserRole.EVENT_MANAGER,
+          'ban tổ chức': UserRole.EVENT_MANAGER,
+          'to chuc': UserRole.EVENT_MANAGER,
+          student: UserRole.STUDENT,
+          'sinh vien': UserRole.STUDENT,
+          'sinh viên': UserRole.STUDENT,
+        };
+        const role = roleMap[rolRaw.toLowerCase()] ?? UserRole.STUDENT;
+
+        const error = !email ? 'Thiếu email' : !password ? 'Thiếu mật khẩu' : '';
+        return { email, password, schoolId, role, name, status: error ? 'error' : 'pending', error } as ImportRow;
+      });
+
+      setImportRows(rows);
+      setShowImport(true);
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể đọc file Excel. Kiểm tra định dạng .xlsx / .xls');
+    }
+  };
+
+  const handleImport = async () => {
+    const valid = importRows.filter(r => r.status !== 'error');
+    if (valid.length === 0) { toast.error('Không có dòng hợp lệ để nhập'); return; }
+
+    setImporting(true);
+    let success = 0, failed = 0;
+
+    // Try bulk first, fall back to per-row
+    try {
+      await userService.importBulk(valid.map(r => ({
+        email: r.email, password: r.password,
+        schoolId: r.schoolId, role: r.role, name: r.name,
+      })));
+      success = valid.length;
+      setImportRows(prev => prev.map(r => r.status === 'pending' ? { ...r, status: 'success' } : r));
+    } catch {
+      // Fall back to individual creates
+      const updated = [...importRows];
+      for (let i = 0; i < updated.length; i++) {
+        if (updated[i].status === 'error') continue;
+        try {
+          await userService.create({ email: updated[i].email, password: updated[i].password, schoolId: updated[i].schoolId, role: updated[i].role, name: updated[i].name });
+          updated[i] = { ...updated[i], status: 'success' };
+          success++;
+        } catch (err: unknown) {
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Lỗi';
+          updated[i] = { ...updated[i], status: 'error', error: msg };
+          failed++;
+        }
+        setImportRows([...updated]);
+      }
+    }
+
+    setImporting(false);
+    if (success > 0) toast.success(`Đã nhập ${success} người dùng thành công${failed > 0 ? `, ${failed} thất bại` : ''}`);
+    else toast.error(`Nhập thất bại (${failed} lỗi)`);
+  };
 
   const canAccess = currentUser?.role === UserRole.ADMIN;
 
@@ -116,8 +232,8 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             value={search}
@@ -126,18 +242,146 @@ export default function UserManagement() {
             className="pl-12 h-12 bg-white border-slate-200 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-sm"
           />
         </div>
-        <Button variant="outline" className="h-12 w-12 p-0 border-slate-200 rounded-xl bg-white shadow-sm">
+        <Button variant="outline" className="h-12 w-12 p-0 border-slate-200 rounded-xl bg-white shadow-sm shrink-0">
           <Filter className="h-4 w-4 text-slate-400" />
+        </Button>
+        {/* Import Excel */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={handleExcelFile}
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-emerald-600 hover:bg-emerald-700 font-bold uppercase tracking-widest text-[10px] h-12 px-5 rounded-xl shadow-sm shrink-0"
+        >
+          <FileSpreadsheet className="h-4 w-4 mr-2" />
+          Nhập Excel
         </Button>
         <Button
           onClick={handleExportPDF}
           disabled={filteredUsers.length === 0}
-          className="bg-red-600 hover:bg-red-700 font-bold uppercase tracking-widest text-[10px] h-12 px-5 rounded-xl shadow-sm"
+          className="bg-red-600 hover:bg-red-700 font-bold uppercase tracking-widest text-[10px] h-12 px-5 rounded-xl shadow-sm shrink-0"
         >
           <Download className="h-4 w-4 mr-2" />
           Xuất PDF
         </Button>
       </div>
+
+      {/* ── Import Excel Modal ── */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <p className="font-black uppercase tracking-tight text-sm">Nhập danh sách người dùng từ Excel</p>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    {importRows.length} dòng · {importRows.filter(r => r.status !== 'error').length} hợp lệ · {importRows.filter(r => r.status === 'error').length} lỗi
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => { setShowImport(false); setImportRows([]); }} className="text-slate-400 hover:text-white transition-colors p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Template hint */}
+            <div className="px-6 py-3 bg-emerald-50 border-b border-emerald-100 shrink-0">
+              <p className="text-emerald-800 text-[11px] font-bold">
+                Cột cần có: <span className="font-black">email · password · mssv · role · name</span>
+                &nbsp;— role: <span className="italic">student / event_manager / admin</span>
+              </p>
+            </div>
+
+            {/* Table preview */}
+            <div className="overflow-auto flex-1">
+              <table className="w-full text-[11px]">
+                <thead className="bg-slate-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px] w-8">#</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">Email</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">Mật khẩu</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">MSSV</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">Họ tên</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">Role</th>
+                    <th className="px-4 py-3 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {importRows.map((row, i) => (
+                    <tr key={i} className={cn(
+                      'transition-colors',
+                      row.status === 'error' && 'bg-red-50',
+                      row.status === 'success' && 'bg-emerald-50',
+                    )}>
+                      <td className="px-4 py-2.5 text-slate-400 font-bold">{i + 1}</td>
+                      <td className="px-4 py-2.5 font-bold text-slate-800">{row.email || <span className="text-red-400 italic">trống</span>}</td>
+                      <td className="px-4 py-2.5 text-slate-500 font-mono">{'•'.repeat(Math.min(row.password.length, 8))}</td>
+                      <td className="px-4 py-2.5 text-slate-600 font-bold">{row.schoolId || '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-600">{row.name || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={cn(
+                          'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider',
+                          row.role === UserRole.ADMIN && 'bg-red-100 text-red-700',
+                          row.role === UserRole.EVENT_MANAGER && 'bg-blue-100 text-blue-700',
+                          row.role === UserRole.STUDENT && 'bg-slate-100 text-slate-600',
+                        )}>
+                          {row.role === UserRole.ADMIN ? 'Admin' : row.role === UserRole.EVENT_MANAGER ? 'Ban TC' : 'Sinh viên'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {row.status === 'pending' && <span className="text-slate-400 text-[9px] font-bold uppercase">Chờ nhập</span>}
+                        {row.status === 'success' && <span className="flex items-center gap-1 text-emerald-600 text-[9px] font-black uppercase"><CheckCircle2 className="h-3 w-3" />Thành công</span>}
+                        {row.status === 'error' && (
+                          <span className="flex items-center gap-1 text-red-500 text-[9px] font-black uppercase">
+                            <AlertCircle className="h-3 w-3 shrink-0" />
+                            {row.error || 'Lỗi'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 shrink-0 gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-800 transition-colors flex items-center gap-1.5"
+              >
+                <Upload className="h-3.5 w-3.5" /> Chọn file khác
+              </button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => { setShowImport(false); setImportRows([]); }}
+                  className="font-black uppercase tracking-widest text-[10px] h-10 px-5 rounded-xl border-slate-200"
+                  disabled={importing}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={importing || importRows.filter(r => r.status === 'pending').length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 font-black uppercase tracking-widest text-[10px] h-10 px-6 rounded-xl"
+                >
+                  {importing
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Đang nhập...</>
+                    : <><Upload className="h-3.5 w-3.5 mr-2" />Nhập {importRows.filter(r => r.status === 'pending').length} người dùng</>
+                  }
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden">
         <CardContent className="p-0">

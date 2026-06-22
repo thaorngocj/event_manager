@@ -28,10 +28,10 @@ export function AdminNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b bg-white px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-md px-4 sm:px-6 lg:px-8">
       <div className="flex items-center gap-2 sm:gap-4">
         <SidebarTrigger className="flex shrink-0" />
-        <div className="hidden sm:flex relative items-center bg-slate-100 rounded-lg px-3 py-1.5 w-48 lg:w-96">
+        <div className="hidden sm:flex relative items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-48 lg:w-80 focus-within:ring-2 focus-within:ring-red-500/20 focus-within:border-red-500 transition-all">
           <Search className="h-4 w-4 text-slate-400 shrink-0" />
           <input
             type="text"
@@ -44,7 +44,7 @@ export function AdminNavbar() {
       <div className="flex items-center gap-1 sm:gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors cursor-pointer">
+            <button className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-red-500 transition-colors cursor-pointer">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="https://github.com/shadcn.png" alt="Admin" />
                 <AvatarFallback>QT</AvatarFallback>

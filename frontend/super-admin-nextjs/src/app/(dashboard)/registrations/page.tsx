@@ -20,6 +20,7 @@ import { Registration } from "@/types"
 import { registrationService } from "@/services/registration.service"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 
 const container = {
   hidden: { opacity: 0 },
@@ -50,13 +51,16 @@ const getStatusBadgeStyle = (status: string) => {
   }
 }
 
+const PAGE_SIZE = 10
+
 export default function RegistrationsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEventId, setSelectedEventId] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
+  const [page, setPage] = useState(1)
 
-  const { data: eventsData } = useEventsQuery()
-  const events = eventsData?.data || []
+  const { data: eventsResult } = useEventsQuery()
+  const events = eventsResult?.data ?? []
   const eventsMeta = useMemo(() => events.map(e => ({ id: e.id, title: e.title })), [events])
   const { data: allRegistrations = [], isLoading } = useAllRegistrationsQuery(eventsMeta)
 
@@ -76,6 +80,9 @@ export default function RegistrationsPage() {
       return matchesSearch && matchesEvent && matchesStatus
     })
   }, [allRegistrations, searchTerm, selectedEventId, selectedStatus])
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE))
+  const pagedData = filteredData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const handleExportCSV = () => {
     const headers = ["ID", "Họ tên", "Email", "MSSV", "Sự kiện", "Ngày đăng ký", "Trạng thái"]
@@ -101,6 +108,7 @@ export default function RegistrationsPage() {
     setSearchTerm("")
     setSelectedEventId("all")
     setSelectedStatus("all")
+    setPage(1)
   }
 
   const handleCancel = async (regId: string) => {
@@ -134,14 +142,14 @@ export default function RegistrationsPage() {
               <div className="w-full lg:flex-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Tìm kiếm người tham gia</label>
                 <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input placeholder="Tên, email hoặc MSSV..." className="pl-9 h-10 text-sm focus-visible:ring-indigo-500 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-red-500 transition-colors" />
+                  <Input placeholder="Tên, email hoặc MSSV..." className="pl-9 h-10 text-sm focus-visible:ring-red-500 transition-all" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} />
                 </div>
               </div>
               <div className="w-full lg:w-64">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Sự kiện</label>
-                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                  <SelectTrigger className="h-10 text-sm focus:ring-indigo-500 transition-all">
+                <Select value={selectedEventId} onValueChange={(v) => { setSelectedEventId(v); setPage(1) }}>
+                  <SelectTrigger className="h-10 text-sm focus:ring-red-500 transition-all">
                     <SelectValue placeholder="Tất cả sự kiện" />
                   </SelectTrigger>
                   <SelectContent>
@@ -154,8 +162,8 @@ export default function RegistrationsPage() {
               </div>
               <div className="w-full lg:w-48">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Trạng thái</label>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="h-10 text-sm focus:ring-indigo-500 transition-all">
+                <Select value={selectedStatus} onValueChange={(v) => { setSelectedStatus(v); setPage(1) }}>
+                  <SelectTrigger className="h-10 text-sm focus:ring-red-500 transition-all">
                     <SelectValue placeholder="Tất cả trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,15 +201,15 @@ export default function RegistrationsPage() {
                 </TableHeader>
                 <TableBody>
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredData.length > 0 ? filteredData.map((reg: Registration) => (
+                    {pagedData.length > 0 ? pagedData.map((reg: Registration) => (
                       <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={reg.id} className="group flex flex-col sm:table-row p-4 sm:p-0 border-b last:border-0 sm:border-b relative hover:bg-slate-50/55 transition-colors">
                         <TableCell className="p-0 sm:px-6 sm:py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600 font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
                               {reg.userName.charAt(0)}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-sm sm:text-base text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{reg.userName}</span>
+                              <span className="font-semibold text-sm sm:text-base text-slate-900 group-hover:text-red-600 transition-colors truncate">{reg.userName}</span>
                               <span className="text-[11px] sm:text-xs text-slate-500 truncate">{reg.userEmail}</span>
                               <div className="sm:hidden mt-2 flex flex-col gap-1">
                                 <span className="text-[11px] font-medium text-slate-700">Sự kiện: {reg.eventName}</span>
@@ -254,6 +262,13 @@ export default function RegistrationsPage() {
               </Table>
             )}
           </CardContent>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={filteredData.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </Card>
       </motion.div>
     </motion.div>

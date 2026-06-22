@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userService } from '@/services/user.service'
-
 import { User, UserRole } from '@/types'
 
 const ROLE_MAP: Record<string, UserRole> = {
@@ -29,27 +28,24 @@ function toUiUser(u: Record<string, unknown>): User {
   }
 }
 
-export function useUsersQuery(params?: { search?: string; page?: number; limit?: number }) {
+export function useUsersQuery(search?: string, page = 1, limit = 20) {
   return useQuery({
-    queryKey: ['users', params],
+    queryKey: ['users', search, page, limit],
     queryFn: async () => {
       try {
-        const response = await userService.getAll({
-          search: params?.search,
-          page: params?.page ?? 1,
-          limit: params?.limit ?? 10,
-        })
-        const list: Record<string, unknown>[] = Array.isArray(response) ? response : (response?.data ?? response?.items ?? [])
+        const data = await userService.getAll({ search, page, limit })
+        if (Array.isArray(data)) {
+          return { data: data.map(toUiUser) as User[], total: data.length, page: 1, totalPages: 1 }
+        }
+        const list: Record<string, unknown>[] = data?.data ?? data?.items ?? []
         return {
           data: list.map(toUiUser) as User[],
-          total: response?.total ?? list.length,
-          page: response?.page ?? 1,
-          limit: response?.limit ?? list.length,
-          totalPages: response?.totalPages ?? 1,
+          total: (data?.total ?? data?.count ?? list.length) as number,
+          page: (data?.page ?? page) as number,
+          totalPages: (data?.totalPages ?? data?.pages ?? 1) as number,
         }
-      } catch (error) {
-        console.error("Failed to load users:", error);
-        return { data: [], total: 0, page: 1, limit: 10, totalPages: 1 };
+      } catch {
+        return { data: [] as User[], total: 0, page: 1, totalPages: 1 }
       }
     },
   })
@@ -58,8 +54,11 @@ export function useUsersQuery(params?: { search?: string; page?: number; limit?:
 export function useCreateUserMutation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (p: { username: string; email: string; password: string; role: string }) =>
-      userService.create({ ...p, role: ROLE_MAP_REVERSE[p.role] ?? p.role }),
+    mutationFn: (p: {
+      username: string; email: string; password: string; role: string
+      mssv?: string; facultyId?: number; major?: string; cohort?: string; classId?: string
+      trainingPoints?: number; unionRole?: string
+    }) => userService.create({ ...p, role: ROLE_MAP_REVERSE[p.role] ?? p.role }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }
@@ -103,5 +102,32 @@ export function useDeactivateUserMutation() {
   return useMutation({
     mutationFn: (id: string) => userService.deactivate(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useImportUsersMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => userService.importUsers(file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useDownloadImportTemplate() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await userService.downloadImportTemplate()
+      const blob = new Blob([response.data], { type: String(response.headers['content-type'] || 'application/octet-stream') })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const disposition = response.headers['content-disposition'] ?? ''
+      const match = disposition.match(/filename[^;=\n]*=(['"]?)([^'"\n]*)\1/)
+      a.download = match?.[2] || 'import_users_template.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    },
   })
 }

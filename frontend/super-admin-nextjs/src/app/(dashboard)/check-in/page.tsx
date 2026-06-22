@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "motion/react"
 import { Registration } from "@/types"
 import { useEventsQuery } from "@/hooks/use-events-api"
 import { useEventRegistrations, useManualCheckinMutation } from "@/hooks/use-registrations-api"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 
 const container = {
   hidden: { opacity: 0 },
@@ -25,13 +26,16 @@ const item = {
   show: { opacity: 1, y: 0 },
 }
 
+const PAGE_SIZE = 10
+
 export default function CheckInPage() {
   const [selectedEventId, setSelectedEventId] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
 
-  const { data: eventsData } = useEventsQuery()
-  const events = eventsData?.data || []
+  const { data: eventsResult } = useEventsQuery()
+  const events = eventsResult?.data ?? []
   const { data: registrations = [], isLoading } = useEventRegistrations(selectedEventId)
   const checkinMutation = useManualCheckinMutation()
 
@@ -66,6 +70,8 @@ export default function CheckInPage() {
 
   const checkedInCount = registrations.filter(r => r.status === 'ĐÃ ĐIỂM DANH').length
   const total = registrations.length
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE))
+  const pagedData = filteredData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 pb-10">
@@ -82,8 +88,8 @@ export default function CheckInPage() {
             <div className="flex flex-col lg:flex-row gap-4 items-end lg:items-center">
               <div className="w-full lg:w-72">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Chọn sự kiện</label>
-                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                  <SelectTrigger className="h-10 text-sm focus:ring-indigo-500 transition-all">
+                <Select value={selectedEventId} onValueChange={(v) => { setSelectedEventId(v); setPage(1) }}>
+                  <SelectTrigger className="h-10 text-sm focus:ring-red-500 transition-all">
                     <CalendarDays className="mr-2 h-4 w-4 text-slate-400 shrink-0" />
                     <SelectValue placeholder="-- Chọn sự kiện --" />
                   </SelectTrigger>
@@ -97,14 +103,14 @@ export default function CheckInPage() {
               <div className="w-full lg:flex-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Tìm kiếm người tham gia</label>
                 <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input placeholder="MSSV, Tên hoặc Sự kiện..." className="pl-9 h-10 text-sm focus-visible:ring-indigo-500 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-red-500 transition-colors" />
+                  <Input placeholder="MSSV, Tên hoặc Sự kiện..." className="pl-9 h-10 text-sm focus-visible:ring-red-500 transition-all" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} />
                 </div>
               </div>
               <div className="w-full lg:w-56">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block font-mono">Lọc trạng thái</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-10 text-sm focus:ring-indigo-500 transition-all">
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+                  <SelectTrigger className="h-10 text-sm focus:ring-red-500 transition-all">
                     <SelectValue placeholder="Tất cả trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
@@ -114,7 +120,7 @@ export default function CheckInPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="ghost" className="h-10 text-xs px-2 sm:px-4 shrink-0 hover:bg-slate-100 transition-colors" onClick={() => { setSearchTerm(""); setStatusFilter("all") }}>
+              <Button variant="ghost" className="h-10 text-xs px-2 sm:px-4 shrink-0 hover:bg-slate-100 transition-colors" onClick={() => { setSearchTerm(""); setStatusFilter("all"); setPage(1) }}>
                 <Filter className="mr-2 h-3.5 w-3.5" /> Đặt lại
               </Button>
             </div>
@@ -142,8 +148,8 @@ export default function CheckInPage() {
                 </TableHeader>
                 <TableBody>
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredData.length > 0 ? (
-                      filteredData.map((reg) => (
+                    {pagedData.length > 0 ? (
+                      pagedData.map((reg) => (
                         <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={reg.id} className="group flex flex-col sm:table-row p-4 sm:p-0 border-b last:border-0 sm:border-b relative hover:bg-slate-50/55 transition-colors">
                           <TableCell className="hidden sm:table-cell font-mono text-xs px-6 text-slate-500">{reg.studentId}</TableCell>
                           <TableCell className="p-0 sm:px-4 sm:py-4">
@@ -188,6 +194,13 @@ export default function CheckInPage() {
               </Table>
             )}
           </CardContent>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={filteredData.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </Card>
       </motion.div>
 
@@ -239,15 +252,15 @@ export default function CheckInPage() {
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="bg-indigo-600 text-white shadow-lg shadow-indigo-200 border-none h-full relative overflow-hidden group">
+          <Card className="bg-red-600 text-white shadow-lg shadow-red-200 border-none h-full relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
               <CheckCircle2 className="w-16 h-16" />
             </div>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-[10px] text-indigo-100">Mẹo quản lý</CardTitle>
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-[10px] text-red-100">Mẹo quản lý</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-indigo-50 leading-relaxed font-medium">
+              <p className="text-xs text-red-50 leading-relaxed font-medium">
                 Chọn sự kiện trước, sau đó dùng MSSV để tìm kiếm sinh viên. Bật công tắc để điểm danh ngay lập tức.
               </p>
             </CardContent>

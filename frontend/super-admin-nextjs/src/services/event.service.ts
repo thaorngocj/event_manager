@@ -11,6 +11,18 @@ export interface CreateEventPayload {
   maxParticipants?: number
   displayCategory?: 'HERO' | 'FEATURED' | 'HIGHLIGHT' | 'NORMAL'
   eventCategory?: string
+  facultyId?: number
+  registrationDeadline?: string
+  organizer?: string
+  contactEmail?: string
+  contactPhone?: string
+  trainingPoints?: number
+  isMandatory?: boolean
+  scale?: string
+  tags?: string[]
+  targetAudiences?: string[]
+  semester?: string
+  academicYear?: string
 }
 
 export const eventService = {
@@ -60,7 +72,14 @@ export const eventService = {
   },
   downloadImportTemplate: async () => {
     const response = await apiClient.get('/events/import-template', { responseType: 'blob' })
-    return response.data
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'template-import-tham-du.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
   },
   downloadImportEventsTemplate: async () => {
     const response = await apiClient.get('/events/import-template-events', { responseType: 'blob' })

@@ -103,28 +103,42 @@ export default function LandingPage() {
     if (scrollRef.current) {
       const cardWidth = 220 + 20;
       const target = scrollRef.current.scrollLeft + (direction === 'left' ? -cardWidth : cardWidth);
-      scrollRef.current.scrollTo({
-        left: target,
-        behavior: 'smooth'
-      });
+      scrollRef.current.scrollTo({ left: target, behavior: 'smooth' });
     }
   };
 
-  const scrollCategories = (direction: 'left' | 'right') => {
-    if (categoriesScrollRef.current) {
-      const scrollAmount = 400;
-      const target = categoriesScrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      categoriesScrollRef.current.scrollTo({
-        left: target,
-        behavior: 'smooth'
-      });
-    }
+  // ── Carousel state ──
+  const [catPage, setCatPage] = useState(0);
+  const [catDir, setCatDir] = useState(1);
+  const [featPage, setFeatPage] = useState(0);
+  const [featDir, setFeatDir] = useState(1);
+
+  const navigateCat = (dir: 1 | -1) => {
+    const total = Math.max(1, Math.ceil(catEvents.length / 3));
+    const next = Math.max(0, Math.min(catPage + dir, total - 1));
+    setCatDir(dir); setCatPage(next);
+  };
+  const navigateFeat = (dir: 1 | -1) => {
+    const total = Math.max(1, Math.ceil(featuredEvents.length / 3));
+    const next = Math.max(0, Math.min(featPage + dir, total - 1));
+    setFeatDir(dir); setFeatPage(next);
+  };
+
+  const carouselVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+    center: { x: 0, opacity: 1, transition: { type: 'spring' as const, stiffness: 280, damping: 30 } },
+    exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0, transition: { duration: 0.18 } }),
   };
 
   // Filter events by section
   const featuredEvents = events.filter(e => e.displayCategory === 'FEATURED');
   const catEvents = events.filter(e => e.displayCategory === 'HIGHLIGHT');
   const proposedEvents = events.filter(e => e.displayCategory === 'HERO');
+
+  const featTotalPages = Math.max(1, Math.ceil(featuredEvents.length / 3));
+  const catTotalPages = Math.max(1, Math.ceil(catEvents.length / 3));
+  const visibleFeat = featuredEvents.slice(featPage * 3, (featPage + 1) * 3);
+  const visibleCat = catEvents.slice(catPage * 3, (catPage + 1) * 3);
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-800 selection:bg-red-100 selection:text-red-700 overflow-x-hidden">
@@ -374,54 +388,70 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredEvents.length > 0 ? featuredEvents.map((event) => (
-                  <motion.div 
-                    key={event.id}
-                    whileHover={{ y: -10 }}
-                    onClick={() => router.push(`/events/${event.id}`)}
-                    className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl cursor-pointer"
-                  >
-                    <img src={event.image || 'https://images.unsplash.com/photo-1540575861501-7ad060e39fe5?auto=format&fit=crop&q=80&w=800'} alt={resolve(event.title)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
-                    
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 text-[10px] font-black tracking-widest uppercase">
-                        {event.category}
-                      </Badge>
-                    </div>
+          <div className="relative">
+            {featTotalPages > 1 && (
+              <button onClick={() => navigateFeat(-1)} disabled={featPage === 0}
+                className="absolute -left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-white border border-slate-100 rounded-full shadow-xl flex items-center justify-center text-slate-400 hover:text-red-600 disabled:opacity-30 transition-all">
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
+            {featTotalPages > 1 && (
+              <button onClick={() => navigateFeat(1)} disabled={featPage === featTotalPages - 1}
+                className="absolute -right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-white border border-slate-100 rounded-full shadow-xl flex items-center justify-center text-slate-400 hover:text-red-600 disabled:opacity-30 transition-all">
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            )}
 
-                    <div className="absolute bottom-6 left-6 right-6 space-y-4">
-                      <h3 className="text-lg font-black text-white italic leading-tight line-clamp-2 uppercase tracking-tighter shadow-sm">
-                        {resolve(event.title)}
-                      </h3>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-red-500 uppercase tracking-widest">
-                          <Clock className="h-3 w-3" />
-                          {event.startTime} - {event.date}
+            <div className="overflow-hidden">
+              <AnimatePresence initial={false} custom={featDir} mode="wait">
+                <motion.div
+                  key={featPage}
+                  custom={featDir}
+                  variants={carouselVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                >
+                  {visibleFeat.length > 0 ? visibleFeat.map((event) => (
+                    <motion.div
+                      key={event.id}
+                      whileHover={{ y: -10 }}
+                      onClick={() => router.push(`/events/${event.id}`)}
+                      className="group relative h-[400px] rounded-2xl overflow-hidden shadow-xl cursor-pointer"
+                    >
+                      <img src={event.image || 'https://images.unsplash.com/photo-1540575861501-7ad060e39fe5?auto=format&fit=crop&q=80&w=800'} alt={resolve(event.title)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 text-[10px] font-black tracking-widest uppercase">{event.category}</Badge>
+                      </div>
+                      <div className="absolute bottom-6 left-6 right-6 space-y-4">
+                        <h3 className="text-lg font-black text-white italic leading-tight line-clamp-2 uppercase tracking-tighter shadow-sm">{resolve(event.title)}</h3>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-[10px] font-black text-red-500 uppercase tracking-widest"><Clock className="h-3 w-3" />{event.startTime} - {event.date}</div>
+                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest"><MapPin className="h-3 w-3" />{resolve(event.location)}</div>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                          <MapPin className="h-3 w-3" />
-                          {resolve(event.location)}
+                        <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[9px] h-9 italic"
+                            onClick={(e) => { e.stopPropagation(); router.push(`/events/${event.id}`); }}>
+                            {t('registerEvent')}
+                          </Button>
                         </div>
                       </div>
-                      
-                      <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          className="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[9px] h-9 italic"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/events/${event.id}`);
-                          }}
-                        >
-                          {t('registerEvent')}
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-            )) : (
-              <div className="col-span-full text-center py-12 text-slate-400 font-bold uppercase tracking-widest opacity-50">
-                Chưa có sự kiện nổi bật
+                    </motion.div>
+                  )) : (
+                    <div className="col-span-3 text-center py-12 text-slate-400 font-bold uppercase tracking-widest opacity-50">Chưa có sự kiện nổi bật</div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {featTotalPages > 1 && (
+              <div className="flex justify-center gap-2 mt-10">
+                {Array.from({ length: featTotalPages }).map((_, i) => (
+                  <button key={i} onClick={() => { setFeatDir(i > featPage ? 1 : -1); setFeatPage(i); }}
+                    className={cn("h-1.5 rounded-full transition-all duration-300", featPage === i ? "w-8 bg-red-600" : "w-4 bg-slate-200 hover:bg-slate-300")} />
+                ))}
               </div>
             )}
           </div>
@@ -446,56 +476,58 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="relative group/cat-slider">
-             {/* Slider Controls */}
-             <button 
-               onClick={() => scrollCategories('left')}
-               className="absolute -left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-red-600 hover:border-red-600 transition-all opacity-0 group-hover/cat-slider:opacity-100"
-             >
-               <ChevronLeft className="h-6 w-6" />
-             </button>
-             <button 
-               onClick={() => scrollCategories('right')}
-               className="absolute -right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-700 transition-all shadow-xl shadow-red-900/40"
-             >
-               <ChevronRight className="h-6 w-6" />
-             </button>
+          <div className="relative">
+            {catTotalPages > 1 && (
+              <button onClick={() => navigateCat(-1)} disabled={catPage === 0}
+                className="absolute -left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-red-600 hover:border-red-600 disabled:opacity-30 transition-all">
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+            <button onClick={() => navigateCat(1)} disabled={catPage === catTotalPages - 1}
+              className="absolute -right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-700 disabled:opacity-30 transition-all shadow-xl shadow-red-900/40">
+              <ChevronRight className="h-6 w-6" />
+            </button>
 
-             <div 
-               ref={categoriesScrollRef}
-               className="flex gap-6 overflow-x-auto no-scrollbar pb-12 scroll-smooth"
-             >
-               {catEvents.length > 0 ? catEvents.map((item) => (
-                 <motion.div 
-                   key={item.id}
-                   whileHover={{ y: -10 }}
-                   onClick={() => router.push(`/events/${item.id}`)}
-                   className="min-w-[300px] md:min-w-[400px] group cursor-pointer relative rounded-2xl overflow-hidden aspect-[16/9] shadow-2xl ring-1 ring-white/10"
-                 >
-                   <img src={item.image || 'https://images.unsplash.com/photo-1540575861501-7ad060e39fe5?auto=format&fit=crop&q=80&w=800'} alt={resolve(item.title)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                   <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-3">
-                     <h3 className="text-xs font-black text-white uppercase tracking-widest line-clamp-2 italic">{resolve(item.title)}</h3>
-                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button className="h-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[8px] italic px-4">
-                          {t('registerEvent')}
-                        </Button>
-                     </div>
-                   </div>
-                 </motion.div>
-               )) : (
-                 <div className="w-full text-center py-20 text-slate-500 font-black uppercase tracking-widest italic opacity-50">
-                    Chưa có sự kiện trong danh mục này
-                 </div>
-               )}
-             </div>
-             
-             {/* Slider pagination dots placeholder */}
-             <div className="flex justify-center gap-2 mt-4">
-               <div className="w-6 h-1 rounded-full bg-red-600"></div>
-               <div className="w-2 h-1 rounded-full bg-white/20"></div>
-               <div className="w-2 h-1 rounded-full bg-white/20"></div>
-             </div>
+            <div className="overflow-hidden">
+              <AnimatePresence initial={false} custom={catDir} mode="wait">
+                <motion.div
+                  key={catPage}
+                  custom={catDir}
+                  variants={carouselVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6"
+                >
+                  {visibleCat.length > 0 ? visibleCat.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      whileHover={{ y: -10 }}
+                      onClick={() => router.push(`/events/${item.id}`)}
+                      className="group cursor-pointer relative rounded-2xl overflow-hidden aspect-[16/9] shadow-2xl ring-1 ring-white/10"
+                    >
+                      <img src={item.image || 'https://images.unsplash.com/photo-1540575861501-7ad060e39fe5?auto=format&fit=crop&q=80&w=800'} alt={resolve(item.title)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                      <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-3">
+                        <h3 className="text-xs font-black text-white uppercase tracking-widest line-clamp-2 italic">{resolve(item.title)}</h3>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button className="h-8 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-[8px] italic px-4">{t('registerEvent')}</Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )) : (
+                    <div className="col-span-3 text-center py-20 text-slate-500 font-black uppercase tracking-widest italic opacity-50">Chưa có sự kiện trong danh mục này</div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: Math.max(catTotalPages, 1) }).map((_, i) => (
+                <button key={i} onClick={() => { setCatDir(i > catPage ? 1 : -1); setCatPage(i); }}
+                  className={cn("h-1 rounded-full transition-all duration-300", catPage === i ? "w-8 bg-red-600" : "w-3 bg-white/20 hover:bg-white/40")} />
+              ))}
+            </div>
           </div>
         </div>
       </section>

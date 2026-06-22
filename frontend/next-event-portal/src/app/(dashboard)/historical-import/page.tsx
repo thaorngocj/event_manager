@@ -103,12 +103,49 @@ export default function HistoricalImport() {
     }
   };
 
-  const handleDownloadTemplate = () => {
-    window.open('/api/proxy/events/import-template', '_blank');
+  const handleDownloadTemplate = async () => {
+    const XLSX = await import('xlsx');
+    const rows = [
+      { email: 'sinhvien001@va.edu.vn', 'họ tên': 'Nguyễn Văn A', mssv: 'SV001' },
+      { email: 'sinhvien002@va.edu.vn', 'họ tên': 'Trần Thị B',   mssv: 'SV002' },
+      { email: 'sinhvien003@va.edu.vn', 'họ tên': 'Lê Văn C',     mssv: 'SV003' },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 30 }, { wch: 25 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mẫu điểm danh');
+    XLSX.writeFile(wb, 'Mau_Diem_Danh.xlsx');
   };
 
-  const handleDownloadEventTemplate = () => {
-    window.open('/api/proxy/events/import-template-events', '_blank');
+  const handleDownloadEventTemplate = async () => {
+    const XLSX = await import('xlsx');
+    const rows = [
+      {
+        title: 'Hội thảo AI 2026',
+        description: 'Sự kiện về trí tuệ nhân tạo trong giáo dục',
+        date: '2026-07-15',
+        startTime: '08:00',
+        endTime: '17:00',
+        location: 'Cơ sở 1 - Phòng A101',
+        capacity: 200,
+        category: 'ACADEMIC',
+      },
+      {
+        title: 'Ngày hội việc làm 2026',
+        description: 'Kết nối sinh viên với doanh nghiệp',
+        date: '2026-08-20',
+        startTime: '07:30',
+        endTime: '16:30',
+        location: 'Sân trường B',
+        capacity: 500,
+        category: 'CAREER',
+      },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 25 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mẫu sự kiện');
+    XLSX.writeFile(wb, 'Mau_Su_Kien.xlsx');
   };
 
   const handleImportEvents = async () => {

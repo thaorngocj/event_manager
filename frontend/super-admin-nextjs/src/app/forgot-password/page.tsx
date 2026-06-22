@@ -35,9 +35,9 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600" />
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 <Button
                   onClick={() => router.push("/login")}
-                  className="mt-2 bg-indigo-600 hover:bg-indigo-700"
+                  className="mt-2 bg-red-600 hover:bg-red-700"
                 >
                   Quay lại đăng nhập
                 </Button>
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
                       id="email"
                       type="email"
                       placeholder="email@university.edu.vn"
-                      className="pl-10 h-11 border-slate-200 focus:ring-indigo-500"
+                      className="pl-10 h-11 border-slate-200 focus:ring-red-500"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
               <CardFooter className="flex flex-col gap-3">
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                  className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-semibold"
                   disabled={isLoading}
                 >
                   {isLoading ? (

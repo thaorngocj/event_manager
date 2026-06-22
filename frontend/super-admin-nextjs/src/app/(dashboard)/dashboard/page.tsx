@@ -1,10 +1,9 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Users, Calendar, Activity, ArrowUpRight } from "lucide-react"
-import { chartData } from "@/lib/mock-data"
 import { Button } from "@/components/ui/button"
 import {
   CartesianGrid,
@@ -31,6 +30,7 @@ import { Progress } from "@/components/ui/progress"
 import { motion } from "motion/react"
 import { useOverviewStats, useActivities } from "@/hooks/use-stats-api"
 import { useEventsQuery } from "@/hooks/use-events-api"
+import { useAllRegistrationsQuery } from "@/hooks/use-registrations-api"
 
 const CHART_COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#6366f1", "#ec4899"]
 
@@ -48,14 +48,35 @@ export default function DashboardPage() {
   const [isMounted, setIsMounted] = useState(false)
 
   const { data: stats = { totalUsers: 0, totalEvents: 0, totalCheckins: 0, checkInRate: 0, totalRegistrations: 0 } } = useOverviewStats()
-  const { data: eventsData } = useEventsQuery()
-  const events = (eventsData?.data || []) as any[]
+  const { data: eventsResult } = useEventsQuery()
+  const events = eventsResult?.data ?? []
   const { data: activities = [] } = useActivities(20)
+  const { data: registrations = [] } = useAllRegistrationsQuery(events)
 
   useEffect(() => { setIsMounted(true) }, [])
 
+  // Build daily registration trend for current month
+  const trendData = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const countByDay: Record<number, number> = {}
+    registrations.forEach(r => {
+      const d = new Date(r.registrationDate)
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate()
+        countByDay[day] = (countByDay[day] ?? 0) + 1
+      }
+    })
+    return Array.from({ length: daysInMonth }, (_, i) => ({
+      name: `${i + 1}`,
+      registrations: countByDay[i + 1] ?? 0,
+    }))
+  }, [registrations])
+
   // Build event breakdown from real data (top 5)
-  const eventBreakdown: any[] = events.slice(0, 5).map((e: any, idx: number) => ({
+  const eventBreakdown = events.slice(0, 5).map((e, idx) => ({
     id: e.id,
     name: e.title,
     registered: e.registeredCount,
@@ -132,9 +153,8 @@ export default function DashboardPage() {
             <CardContent className="flex-1 min-h-[300px]">
               <div className="h-full w-full min-h-[300px]">
                 {isMounted && (
-                  [] as any[] /* Replace chartData with empty array until API is ready */).length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={[]} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -148,13 +168,7 @@ export default function DashboardPage() {
                       <Area type="monotone" dataKey="registrations" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorReg)" />
                     </AreaChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
-                    <Activity className="w-8 h-8 opacity-20" />
-                    <p className="text-sm">Chưa có xu hướng đăng ký</p>
-                  </div>
-                )
-              }
+                )}
               </div>
             </CardContent>
           </Card>
@@ -229,26 +243,19 @@ export default function DashboardPage() {
             <CardContent className="flex-1 min-h-[300px]">
               <div className="h-full w-full min-h-[300px]">
                 {isMounted && (
-                  eventBreakdown.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={eventBreakdown} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.2} />
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} hide />
-                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, width: 100 }} width={100} />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
-                        <Bar dataKey="registered" radius={[0, 4, 4, 0]} barSize={25}>
-                          {eventBreakdown.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
-                      <Calendar className="w-8 h-8 opacity-20" />
-                      <p className="text-sm">Chưa có dữ liệu sự kiện</p>
-                    </div>
-                  )
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={eventBreakdown} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.2} />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, width: 100 }} width={100} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
+                      <Bar dataKey="registered" radius={[0, 4, 4, 0]} barSize={25}>
+                        {eventBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
               </div>
             </CardContent>
@@ -270,13 +277,13 @@ export default function DashboardPage() {
                     className="space-y-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 transition-colors group"
                   >
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700 group-hover:text-indigo-600 transition-colors truncate max-w-[200px]">{event.name}</span>
+                      <span className="font-medium text-slate-700 group-hover:text-red-600 transition-colors truncate max-w-[200px]">{event.name}</span>
                       <span className="text-slate-500 font-mono shrink-0">{event.registered} / {event.capacity}</span>
                     </div>
                     <Progress
                       value={event.capacity > 0 ? (event.registered / event.capacity) * 100 : 0}
                       className="h-2 bg-slate-100 rounded-full"
-                      indicatorClassName={i % 2 === 0 ? "bg-indigo-600" : "bg-emerald-500"}
+                      indicatorClassName={i % 2 === 0 ? "bg-red-600" : "bg-emerald-500"}
                     />
                     <div className="flex justify-end">
                       <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">

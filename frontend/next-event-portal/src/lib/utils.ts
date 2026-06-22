@@ -7,15 +7,20 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getImageUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
-  // Lấy base url (http://localhost:3000)
-  const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
-  
+
+  // Nếu là URL đầy đủ chứa /uploads/ → trích filename và dùng proxy nội bộ
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('/uploads/')) {
+      const filename = url.split('/uploads/').pop();
+      return `/api/uploads/${filename}`;
+    }
+    return url;
+  }
+
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
   if (cleanUrl.startsWith('/uploads/')) {
-    return `${baseUrl}${cleanUrl}`;
+    const filename = cleanUrl.replace('/uploads/', '');
+    return `/api/uploads/${filename}`;
   }
   return cleanUrl;
 }

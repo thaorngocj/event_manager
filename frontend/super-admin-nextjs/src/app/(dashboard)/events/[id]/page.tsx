@@ -158,7 +158,7 @@ export default function EventDetailsPage() {
           </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
             <div className="text-xl sm:text-2xl font-bold">{event.registeredCount} / {event.capacity}</div>
-            <Progress value={completionRate} className="h-1.5 sm:h-2 mt-3 sm:mt-4 bg-slate-100 rounded-full" indicatorClassName="bg-indigo-600" />
+            <Progress value={completionRate} className="h-1.5 sm:h-2 mt-3 sm:mt-4 bg-slate-100 rounded-full" indicatorClassName="bg-red-600" />
             <p className="text-[9px] sm:text-[10px] text-slate-400 mt-2 font-semibold uppercase">{completionRate}% HOÀN THÀNH</p>
           </CardContent>
         </Card>
@@ -286,18 +286,18 @@ export default function EventDetailsPage() {
         <div className="space-y-6">
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-indigo-600" /> Import danh sách tham dự</CardTitle>
+              <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-red-600" /> Import danh sách tham dự</CardTitle>
               <CardDescription>Upload file Excel để import danh sách sinh viên tham dự sự kiện này.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => setImportFile(e.target.files?.[0] ?? null)} />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all"
+                className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-red-300 hover:bg-red-50/30 transition-all"
               >
                 {importFile ? (
                   <div className="flex items-center justify-center gap-3">
-                    <FileSpreadsheet className="h-6 w-6 text-indigo-600" />
+                    <FileSpreadsheet className="h-6 w-6 text-red-600" />
                     <span className="text-sm font-semibold text-slate-700">{importFile.name}</span>
                     <button type="button" onClick={(e) => { e.stopPropagation(); setImportFile(null) }} className="text-slate-400 hover:text-red-500">
                       <X className="h-4 w-4" />
@@ -311,7 +311,7 @@ export default function EventDetailsPage() {
                 )}
               </div>
               <div className="flex gap-3">
-                <Button onClick={handleImport} disabled={!importFile || isImporting} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={handleImport} disabled={!importFile || isImporting} className="bg-red-600 hover:bg-red-700">
                   {isImporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang import...</> : <><Upload className="h-4 w-4 mr-2" /> Import</>}
                 </Button>
                 <Button variant="outline" onClick={() => eventService.downloadImportTemplate()} className="text-slate-600">
@@ -371,12 +371,12 @@ export default function EventDetailsPage() {
       {activeTab === 'stats' && (
         <Card className="bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-indigo-600" /> Thống kê chi tiết sự kiện</CardTitle>
+            <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-red-600" /> Thống kê chi tiết sự kiện</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingStats ? (
               <div className="h-32 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-red-600" />
               </div>
             ) : !eventStats ? (
               <div className="h-32 flex flex-col items-center justify-center gap-3 text-slate-400">

@@ -3,7 +3,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventService, CreateEventPayload } from '@/services/event.service'
 
-
 const API_STATUS_MAP: Record<string, 'SẮP DIỄN RA' | 'ĐANG DIỄN RA' | 'ĐÃ KẾT THÚC' | 'ĐÃ HỦY'> = {
   DRAFT: 'SẮP DIỄN RA',
   UPCOMING: 'SẮP DIỄN RA',
@@ -28,26 +27,38 @@ function toUiEvent(e: Record<string, unknown>) {
     endDate: (e.endDate as string) ?? '',
     displayCategory: (e.displayCategory as 'HERO' | 'FEATURED' | 'HIGHLIGHT' | 'NORMAL') ?? 'NORMAL',
     eventCategory: (e.eventCategory as string) ?? '',
+    organizer: (e.organizer as string) ?? '',
+    contactEmail: (e.contactEmail as string) ?? '',
+    contactPhone: (e.contactPhone as string) ?? '',
+    registrationDeadline: (e.registrationDeadline as string) ?? '',
+    trainingPoints: (e.trainingPoints as number) ?? 0,
+    semester: (e.semester as string) ?? '',
+    academicYear: (e.academicYear as string) ?? '',
+    scale: (e.scale as string) ?? 'SCHOOL',
+    isMandatory: (e.isMandatory as boolean) ?? false,
+    facultyId: e.facultyId ? String(e.facultyId) : null,
   }
 }
 
-export function useEventsQuery(params?: Record<string, unknown>) {
+export function useEventsQuery(page = 1, limit = 20) {
   return useQuery({
-    queryKey: ['events', params],
+    queryKey: ['events', page, limit],
     queryFn: async () => {
       try {
-        const response = await eventService.getAll(params)
-        const list: Record<string, unknown>[] = Array.isArray(response) ? response : (response?.data ?? response?.items ?? [])
+        const data = await eventService.getAll({ page, limit })
+        if (Array.isArray(data)) {
+          return { data: data.map(toUiEvent), total: data.length, page: 1, totalPages: 1 }
+        }
+        const list: Record<string, unknown>[] = data?.data ?? data?.items ?? []
         return {
           data: list.map(toUiEvent),
-          total: response?.total ?? list.length,
-          page: response?.page ?? 1,
-          limit: response?.limit ?? list.length,
-          totalPages: response?.totalPages ?? 1,
+          total: (data?.total ?? data?.count ?? list.length) as number,
+          page: (data?.page ?? page) as number,
+          totalPages: (data?.totalPages ?? data?.pages ?? 1) as number,
         }
       } catch (error) {
-        console.error("Failed to load events:", error);
-        return { data: [], total: 0, page: 1, limit: 10, totalPages: 1 };
+        console.error("Failed to load events:", error)
+        return { data: [], total: 0, page: 1, totalPages: 1 }
       }
     },
   })
