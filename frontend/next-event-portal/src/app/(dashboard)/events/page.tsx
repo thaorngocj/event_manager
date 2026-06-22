@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 
 /**
  * @license
@@ -56,6 +57,17 @@ interface Faculty {
   name: string;
 }
 
+function SearchParamSync({ setViewMode }: { setViewMode: (m: 'grid' | 'calendar') => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'calendar') {
+      setViewMode('calendar');
+    }
+  }, [searchParams, setViewMode]);
+  return null;
+}
+
 export default function Events() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
@@ -63,15 +75,6 @@ export default function Events() {
   const { user } = useAuth();
   const { events, deleteEvent, updateEvent, searchQuery, refreshEvents } = useEvents();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Sync viewMode with URL query param ?tab=calendar
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'calendar') {
-      setViewMode('calendar');
-    }
-  }, [searchParams]);
 
   const [newEvent, setNewEvent] = useState({
     title: '', description: '', location: '',
@@ -334,7 +337,10 @@ export default function Events() {
   const getStatusLabel = (status: EventStatus) => statusOptions.find(o => o.value === status)?.label ?? status;
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
+      <Suspense fallback={null}>
+        <SearchParamSync setViewMode={setViewMode} />
+      </Suspense>
       {user?.role === UserRole.STUDENT && (
         <div className="bg-white border-b border-slate-100 -mx-4 md:-mx-8 -mt-4 md:-mt-8 py-2 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest gap-2">
           <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-center md:text-left">
